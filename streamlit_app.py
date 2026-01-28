@@ -488,7 +488,7 @@ with st.sidebar:
     <div style="text-align: center; padding: 1rem 0 1.5rem 0;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
         <div style="font-size: 1.5rem; font-weight: 700;">Aide AI</div>
-        <div style="font-size: 0.8rem; opacity: 0.7;">성동구 조례 AI 보좌관</div>
+        <div style="font-size: 0.8rem; opacity: 0.7;">성동구 AI 보좌관</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -551,7 +551,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>🏛️ Aide AI <span class="header-badge">성동구 전용</span></h1>
-    <p>조례 기반 AI 업무 보좌관 · 똑똑하게 일하는 첫걸음</p>
+    <p>자치법규 기반 AI 업무 보좌관 · 철저한 근거 기반 공공업무용 챗봇</p>
 </div>
 """, unsafe_allow_html=True)
 
