@@ -599,6 +599,10 @@ for msg in st.session_state.messages:
                 for s in list(set(msg['sources']))[:5]:
                     full_name = s.replace('.hwpx', '').replace('.pdf', '')
                     sources_html += f'<div class="source-tag">{full_name}</div>'
+            chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
+    
+    chat_html += '</div>'
+    st.markdown(chat_html, unsafe_allow_html=True)
             
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
                 
