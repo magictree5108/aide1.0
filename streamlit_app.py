@@ -596,9 +596,9 @@ with col_main:
             sources_html = ""
             if 'sources' in msg and msg['sources']:
                 sources_html = "<br><br><small>📎 참조 문서:</small><br>"
-                for s in list(set(msg['sources']))[:3]:
-                    short_name = s.replace('.hwpx', '')[:35]
-                    sources_html += f'<span class="source-tag">{short_name}...</span>'
+for s in list(set(msg['sources']))[:5]:
+    full_name = s.replace('.hwpx', '').replace('.pdf', '')
+    sources_html += f'<div class="source-tag">{full_name}</div>'
             
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
     
