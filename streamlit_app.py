@@ -446,6 +446,9 @@ SYSTEM_PROMPT = """당신은 성동구 조례 전문가 AI 보좌관입니다.
 - 근거 없이 숫자(과태료, 기간 등) 지어내지 않음
 - 불확실하면 "확인 필요" 명시"""
 
+## 답변 마무리
+- 모든 답변 끝에 다음 문구 추가: "*별표, 서식 관련 내용은 오류가 날 수 있습니다*" """
+
 
 def get_ai_response(messages):
     user_query = messages[-1]['content']
