@@ -158,13 +158,28 @@ st.markdown("""
 def get_openai_client():
     return OpenAI(api_key=OPENAI_API_KEY)
 
-# 문서 인덱스 로드
+# 문서 인덱스 로드 (분할 파일 지원)
 @st.cache_data
 def load_documents():
+    import glob
+    
+    # 분할 파일 합치기
+    part_files = sorted(glob.glob("document_index_part_*"))
+    
+    if part_files:
+        combined = b""
+        for pf in part_files:
+            with open(pf, 'rb') as f:
+                combined += f.read()
+        data = json.loads(combined.decode('utf-8'))
+        return data.get('documents', []), data.get('embeddings', [])
+    
+    # 단일 파일
     if os.path.exists(INDEX_FILE):
         with open(INDEX_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             return data.get('documents', []), data.get('embeddings', [])
+    
     return [], []
 
 documents, embeddings = load_documents()
