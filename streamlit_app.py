@@ -310,6 +310,14 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 20px rgba(3, 105, 161, 0.4) !important;
     }
+
+    .stSpinner > div > div {
+        color: #0369a1 !important;
+    }
+    
+    .stSpinner > div > span {
+        color: #1e293b !important;
+    }
     
     ::-webkit-scrollbar {
         width: 6px;
