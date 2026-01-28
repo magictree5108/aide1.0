@@ -1,5 +1,5 @@
 """
-Aide AI - 성동구 전용 (Streamlit 버전)
+Aide 1.0 - 성동구 전용 (Streamlit 버전)
 """
 import streamlit as st
 import json
@@ -22,7 +22,7 @@ INDEX_FILE = "./document_index.json"
 
 # 페이지 설정
 st.set_page_config(
-    page_title="Aide AI - 성동구 전용",
+    page_title="Aide 1.0 beta - 성동구 전용",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -487,7 +487,7 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 1rem 0 1.5rem 0;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">Aide 1.0</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">Aide 1.0 beta</div>
         <div style="font-size: 0.8rem; opacity: 0.7;">신뢰할 수 있는 공공업무 특화 Chat bot</div>
     </div>
     """, unsafe_allow_html=True)
@@ -537,8 +537,8 @@ with st.sidebar:
     
     st.markdown("""
     <div class="contact-card">
-        <div class="contact-card-title">📞 도움이 필요하신가요?</div>
-        <div class="contact-card-text">시스템 문의: 010-8829-5108</div>
+        <div class="contact-card-title">📞문의사항이 있으신가요?</div>
+        <div class="contact-card-text">개발자(정호원): 010-8829-5108</div>
     </div>
     """, unsafe_allow_html=True)
 
