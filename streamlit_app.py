@@ -37,12 +37,15 @@ st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
     .stDeployButton {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
 # 커스텀 CSS - 세련된 디자인
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display: none;}
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
