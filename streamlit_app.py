@@ -11,9 +11,6 @@ from openai import OpenAI
 # ============================================
 # 설정
 # ============================================
-# 만약 langchain이나 다른 라이브러리를 쓴다면 환경변수로 설정
-# (환경변수에 넣어두면 OpenAI 클라이언트가 알아서 갖다 씁니다)
-import os
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
@@ -44,17 +41,14 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
     
-    /* 기본 폰트 */
     html, body, [class*="st-"] {
         font-family: 'Noto Sans KR', sans-serif;
     }
     
-    /* 메인 배경 */
     .stApp {
         background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
     }
     
-    /* 사이드바 */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
     }
@@ -67,7 +61,6 @@ st.markdown("""
         border-color: rgba(255,255,255,0.1);
     }
     
-    /* 헤더 스타일 */
     .main-header {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 50%, #4f46e5 100%);
         padding: 2rem 2.5rem;
@@ -115,7 +108,6 @@ st.markdown("""
         border: 1px solid rgba(255,255,255,0.3);
     }
     
-    /* 가이드 카드 */
     .guide-card {
         background: rgba(255,255,255,0.08);
         backdrop-filter: blur(10px);
@@ -149,7 +141,6 @@ st.markdown("""
         line-height: 1.5;
     }
     
-    /* 채팅 메시지 */
     .chat-container {
         background: white;
         border-radius: 1.25rem;
@@ -187,20 +178,18 @@ st.markdown("""
         color: #0369a1;
     }
     
-    /* 소스 태그 */
     .source-tag {
-        display: inline-block;
+        display: block;
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         color: #1e40af;
-        padding: 0.3rem 0.7rem;
+        padding: 0.4rem 0.8rem;
         border-radius: 0.5rem;
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         font-weight: 500;
-        margin: 0.2rem;
+        margin: 0.3rem 0;
         border: 1px solid #93c5fd;
     }
     
-    /* 예시 버튼 */
     .example-btn {
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.15);
@@ -221,7 +210,6 @@ st.markdown("""
         transform: translateX(4px);
     }
     
-    /* 문서 아이템 */
     .doc-item {
         background: white;
         border: 1px solid #e2e8f0;
@@ -241,7 +229,6 @@ st.markdown("""
         transform: translateX(4px);
     }
     
-    /* 상태 뱃지 */
     .status-badge {
         display: inline-flex;
         align-items: center;
@@ -262,7 +249,6 @@ st.markdown("""
         border-color: #fca5a5;
     }
     
-    /* 풋터 경고 */
     .footer-warning {
         background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
         border: 1px solid #fbbf24;
@@ -275,7 +261,6 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(251, 191, 36, 0.15);
     }
     
-    /* 연락처 카드 */
     .contact-card {
         background: linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(14,165,233,0.1) 100%);
         border: 1px solid rgba(56,189,248,0.3);
@@ -296,7 +281,6 @@ st.markdown("""
         opacity: 0.9;
     }
     
-    /* 입력 영역 */
     .stTextArea textarea {
         border-radius: 1rem !important;
         border: 2px solid #e2e8f0 !important;
@@ -310,7 +294,6 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1) !important;
     }
     
-    /* 버튼 */
     .stButton > button {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%) !important;
         color: white !important;
@@ -328,7 +311,6 @@ st.markdown("""
         box-shadow: 0 6px 20px rgba(3, 105, 161, 0.4) !important;
     }
     
-    /* 스크롤바 */
     ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -348,7 +330,6 @@ st.markdown("""
         background: #64748b;
     }
     
-    /* 섹션 타이틀 */
     .section-title {
         font-size: 0.75rem;
         font-weight: 600;
@@ -364,13 +345,11 @@ st.markdown("""
 
 # OpenAI 클라이언트
 def get_openai_client():
-    # api_key를 명시적으로 넣어주는 것이 가장 안전합니다.
     return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    
+
 # 문서 인덱스 로드 (분할 파일 지원)
 @st.cache_data
 def load_documents():
-    # 분할 파일 합치기
     part_files = sorted(glob.glob("document_index_part_*"))
     
     if part_files:
@@ -381,7 +360,6 @@ def load_documents():
         data = json.loads(combined.decode('utf-8'))
         return data.get('documents', []), data.get('embeddings', [])
     
-    # 단일 파일
     if os.path.exists(INDEX_FILE):
         with open(INDEX_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -589,7 +567,7 @@ with col_main:
         </div>
         """
     
-for msg in st.session_state.messages:
+    for msg in st.session_state.messages:
         if msg['role'] == 'user':
             chat_html += f'<div class="user-message">{msg["content"]}</div>'
         else:
@@ -601,11 +579,6 @@ for msg in st.session_state.messages:
                     sources_html += f'<div class="source-tag">{full_name}</div>'
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
     
-    chat_html += '</div>'
-    st.markdown(chat_html, unsafe_allow_html=True)
-            
-            chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
-                
     chat_html += '</div>'
     st.markdown(chat_html, unsafe_allow_html=True)
     
