@@ -11,12 +11,11 @@ from openai import OpenAI
 # ============================================
 # 설정
 # ============================================
-# st.secrets를 통해 키를 안전하게 불러옵니다.
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-
 # 만약 langchain이나 다른 라이브러리를 쓴다면 환경변수로 설정
+# (환경변수에 넣어두면 OpenAI 클라이언트가 알아서 갖다 씁니다)
 import os
-os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 INDEX_FILE = "./document_index.json"
 # ============================================
@@ -365,8 +364,9 @@ st.markdown("""
 
 # OpenAI 클라이언트
 def get_openai_client():
-    return OpenAI(api_key=OPENAI_API_KEY)
-
+    # api_key를 명시적으로 넣어주는 것이 가장 안전합니다.
+    return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    
 # 문서 인덱스 로드 (분할 파일 지원)
 @st.cache_data
 def load_documents():
