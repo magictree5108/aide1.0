@@ -551,8 +551,8 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 2열 레이아웃
-col_main, col_docs = st.columns([3, 1])
+# 메인 레이아웃
+col_main = st.container()
 
 with col_main:
     # 상태 표시
@@ -647,22 +647,3 @@ with col_main:
         중요한 결정 시 원문을 반드시 확인하세요.
     </div>
     """, unsafe_allow_html=True)
-
-# 오른쪽: 문서 목록
-with col_docs:
-    st.markdown("### 📂 학습된 문서")
-    
-    search_query = st.text_input("🔍 문서 검색", placeholder="검색어...", label_visibility="collapsed")
-    
-    doc_names = list(set([doc['filename'] for doc in documents]))
-    
-    if search_query:
-        doc_names = [d for d in doc_names if search_query.lower() in d.lower()]
-    
-    st.caption(f"총 {len(doc_names)}개 문서")
-    
-    for doc_name in doc_names[:15]:
-        clean_name = doc_name.replace('.hwpx', '').replace('[', '').replace(']', ' ')
-        if st.button(f"📄 {clean_name[:22]}...", key=f"doc_{doc_name}", use_container_width=True):
-            st.session_state.input_text = f'"{clean_name}"에 대해 자세히 설명해줘'
-            st.rerun()
