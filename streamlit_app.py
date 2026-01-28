@@ -487,8 +487,8 @@ with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 1rem 0 1.5rem 0;">
         <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">Aide AI</div>
-        <div style="font-size: 0.8rem; opacity: 0.7;">성동구 AI 보좌관</div>
+        <div style="font-size: 1.5rem; font-weight: 700;">Aide 1.0</div>
+        <div style="font-size: 0.8rem; opacity: 0.7;">신뢰할 수 있는 공공업무 특화 Chat bot</div>
     </div>
     """, unsafe_allow_html=True)
     
