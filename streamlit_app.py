@@ -550,7 +550,7 @@ with st.sidebar:
 # 헤더
 st.markdown("""
 <div class="main-header">
-    <h1>🏛️ Aide AI <span class="header-badge">성동구 전용</span></h1>
+    <h1>🏛️ Aide 1.0 beta <span class="header-badge">성동구 전용</span></h1>
     <p>자치법규 기반 AI 업무 보좌관 · 철저한 근거 기반 공공업무용 챗봇</p>
 </div>
 """, unsafe_allow_html=True)
@@ -647,7 +647,7 @@ with col_main:
     # 면책 문구
     st.markdown("""
     <div class="footer-warning">
-        ⚠️ Aide AI는 성동구 조례를 바탕으로 신뢰성 있는 답변을 제공하지만 실수를 할 수 있습니다.<br>
+        ⚠️ Aide 1.0 beta는 성동구 조례를 바탕으로 신뢰성 있는 답변을 제공하지만 실수를 할 수 있습니다.<br>
         중요한 결정 시 원문을 반드시 확인하세요.
     </div>
     """, unsafe_allow_html=True)
