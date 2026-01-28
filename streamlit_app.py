@@ -589,10 +589,10 @@ with col_main:
         </div>
         """
     
-    for msg in st.session_state.messages:
+for msg in st.session_state.messages:
         if msg['role'] == 'user':
             chat_html += f'<div class="user-message">{msg["content"]}</div>'
-else:
+        else:
             sources_html = ""
             if 'sources' in msg and msg['sources']:
                 sources_html = "<br><br><small>📎 참조 문서:</small><br>"
