@@ -12,7 +12,7 @@ from openai import OpenAI
 # ============================================
 # 설정
 # ============================================
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 INDEX_FILE = "./document_index.json"
 # ============================================
 
