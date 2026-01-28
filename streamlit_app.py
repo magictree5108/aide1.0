@@ -24,14 +24,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 페이지 설정
-st.set_page_config(
-    page_title="Aide AI - 성동구 전용",
-    page_icon="🏛️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # Streamlit 기본 요소 숨기기
 st.markdown("""
 <style>
@@ -42,10 +34,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 커스텀 CSS - 세련된 디자인
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-.stDeployButton {display: none;}
-
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
