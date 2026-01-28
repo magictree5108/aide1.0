@@ -1,27 +1,6 @@
 """
 Aide AI - 성동구 전용 (Streamlit 버전)
 """
-
-import streamlit as st
-import os
-
-st.title("🔑 키 진단 모드")
-
-# 1. secrets에서 키 가져오기 시도
-try:
-    api_key = st.secrets["OPENAI_API_KEY"]
-    # 보안을 위해 앞 5자리와 뒤 2자리만 출력
-    masked_key = f"{api_key[:5]}...{api_key[-2:]}"
-    st.success(f"현재 로드된 API 키: {masked_key}")
-    
-    # 공백이 섞여있는지 길이 확인
-    st.write(f"키 길이: {len(api_key)} (sk-proj...라면 보통 100자 이상이어야 함)")
-except Exception as e:
-    st.error(f"secrets를 못 읽고 있습니다: {e}")
-
-# 2. 강제로 환경변수 설정 (이 코드가 없으면 안 될 때가 있음)
-os.environ["OPENAI_API_KEY"] = api_key
-
 import streamlit as st
 import json
 import os
