@@ -592,16 +592,16 @@ with col_main:
     for msg in st.session_state.messages:
         if msg['role'] == 'user':
             chat_html += f'<div class="user-message">{msg["content"]}</div>'
-        else:
+else:
             sources_html = ""
             if 'sources' in msg and msg['sources']:
                 sources_html = "<br><br><small>📎 참조 문서:</small><br>"
-for s in list(set(msg['sources']))[:5]:
-    full_name = s.replace('.hwpx', '').replace('.pdf', '')
-    sources_html += f'<div class="source-tag">{full_name}</div>'
+                for s in list(set(msg['sources']))[:5]:
+                    full_name = s.replace('.hwpx', '').replace('.pdf', '')
+                    sources_html += f'<div class="source-tag">{full_name}</div>'
             
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
-    
+                
     chat_html += '</div>'
     st.markdown(chat_html, unsafe_allow_html=True)
     
