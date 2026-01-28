@@ -11,7 +11,13 @@ from openai import OpenAI
 # ============================================
 # 설정
 # ============================================
-OPENAI_API_KEY = "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"
+# st.secrets를 통해 키를 안전하게 불러옵니다.
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+# 만약 langchain이나 다른 라이브러리를 쓴다면 환경변수로 설정
+import os
+os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+
 INDEX_FILE = "./document_index.json"
 # ============================================
 
