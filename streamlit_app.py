@@ -359,7 +359,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # OpenAI 클라이언트
-@st.cache_resource
 def get_openai_client():
     return OpenAI(api_key=OPENAI_API_KEY)
 
