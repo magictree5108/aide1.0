@@ -551,7 +551,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>🏛️ Aide 1.0 beta <span class="header-badge">성동구 전용</span></h1>
-    <p>자치법규 기반 AI 업무 보좌관 · 철저한 근거 기반 공공업무용 챗봇</p>
+    <p>자치법규 기반 AI 업무 보좌관 · 철저한 근거를 기반합니다. 거짓말하지 않습니다.</p>
 </div>
 """, unsafe_allow_html=True)
 
