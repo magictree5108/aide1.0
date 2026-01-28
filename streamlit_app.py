@@ -564,7 +564,7 @@ with col_main:
         st.markdown(f"""
         <div class="status-badge">
             <span>✅</span>
-            <span>준비 완료! {len(documents)}개 문서 청크 학습됨</span>
+            <span>준비 완료! {len(documents)}개 자치법규 및 공문서 학습됨</span>
         </div>
         """, unsafe_allow_html=True)
     else:
