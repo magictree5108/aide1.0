@@ -31,6 +31,7 @@ st.markdown("""
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
     [data-testid="collapsedControl"] {display: none;}
+    [data-testid="stSidebarCollapseButton"] {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
