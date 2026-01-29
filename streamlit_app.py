@@ -393,19 +393,36 @@ def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
-def search_documents(query, n_results=5):
+def search_documents(query, n_results=10):
     if not documents or not embeddings:
         return []
     
+    # 1. 벡터 검색 (의미 기반)
     query_embedding = get_embedding(query)
-    
-    scores = []
+    vector_scores = []
     for i, emb in enumerate(embeddings):
         score = cosine_similarity(query_embedding, emb)
-        scores.append((i, score))
+        vector_scores.append((i, score))
     
-    scores.sort(key=lambda x: x[1], reverse=True)
-    top_indices = scores[:n_results]
+    # 2. 키워드 검색 (단어 매칭)
+    query_keywords = set(query.lower().replace('?', '').replace('.', '').split())
+    keyword_scores = []
+    for i, doc in enumerate(documents):
+        content = doc['content'].lower() + doc['filename'].lower()
+        matches = sum(1 for kw in query_keywords if kw in content)
+        keyword_scores.append((i, matches / max(len(query_keywords), 1)))
+    
+    # 3. 점수 합산 (벡터 70% + 키워드 30%)
+    combined_scores = []
+    for i in range(len(documents)):
+        v_score = vector_scores[i][1]
+        k_score = keyword_scores[i][1]
+        combined = (v_score * 0.7) + (k_score * 0.3)
+        combined_scores.append((i, combined))
+    
+    # 4. 정렬 및 상위 결과 반환
+    combined_scores.sort(key=lambda x: x[1], reverse=True)
+    top_indices = combined_scores[:n_results]
     
     results = []
     for idx, score in top_indices:
