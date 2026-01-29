@@ -355,25 +355,55 @@ st.markdown("""
 def get_openai_client():
     return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 문서 인덱스 로드 (분할 파일 지원)
+# 문서 인덱스 로드 (여러 인덱스 파일 지원)
 @st.cache_data
 def load_documents():
-    part_files = sorted(glob.glob("document_index_part_*"))
+    all_docs = []
+    all_embeddings = []
     
-    if part_files:
+    # 1. 기존 조례 인덱스 (document_index_part_*)
+    doc_parts = sorted(glob.glob("document_index_part_*"))
+    if doc_parts:
         combined = b""
-        for pf in part_files:
+        for pf in doc_parts:
             with open(pf, 'rb') as f:
                 combined += f.read()
         data = json.loads(combined.decode('utf-8'))
-        return data.get('documents', []), data.get('embeddings', [])
+        all_docs.extend(data.get('documents', []))
+        all_embeddings.extend(data.get('embeddings', []))
     
-    if os.path.exists(INDEX_FILE):
-        with open(INDEX_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return data.get('documents', []), data.get('embeddings', [])
+    # 2. 웹 크롤링 인덱스 (web_index_part_*)
+    web_parts = sorted(glob.glob("web_index_part_*"))
+    if web_parts:
+        combined = b""
+        for pf in web_parts:
+            with open(pf, 'rb') as f:
+                combined += f.read()
+        data = json.loads(combined.decode('utf-8'))
+        all_docs.extend(data.get('documents', []))
+        all_embeddings.extend(data.get('embeddings', []))
     
-    return [], []
+    # 3. 추가 인덱스 (extra_index_part_*) - 미래 확장용
+    extra_parts = sorted(glob.glob("extra_index_part_*"))
+    if extra_parts:
+        combined = b""
+        for pf in extra_parts:
+            with open(pf, 'rb') as f:
+                combined += f.read()
+        data = json.loads(combined.decode('utf-8'))
+        all_docs.extend(data.get('documents', []))
+        all_embeddings.extend(data.get('embeddings', []))
+    
+    # 4. 단일 파일 폴백 (로컬 테스트용)
+    if not all_docs:
+        for index_file in ["document_index.json", "web_index.json", "extra_index.json"]:
+            if os.path.exists(index_file):
+                with open(index_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    all_docs.extend(data.get('documents', []))
+                    all_embeddings.extend(data.get('embeddings', []))
+    
+    return all_docs, all_embeddings
 
 documents, embeddings = load_documents()
 client = get_openai_client()
