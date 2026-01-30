@@ -572,7 +572,7 @@ with st.sidebar:
     
     st.markdown("""
     <div class="contact-card">
-        <div class="contact-card-title">📞문의사항이 있으신가요?</div>
+        <div class="contact-card-title">📞문의사항or피드백 있으신가요?</div>
         <div class="contact-card-text">개발자(정호원): 010-8829-5108</div>
     </div>
     """, unsafe_allow_html=True)
@@ -586,7 +586,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>🏛️ Aide 1.0 beta <span class="header-badge">성동구 전용</span></h1>
-    <p>자치법규 기반 AI 업무 보좌관 · 철저한 근거를 기반합니다. 거짓말 없이 모르면 모른다고 합니다.</p>
+    <p>신뢰할 수 있는 공공업무 특화 Chat bot - 철저한 근거 중심, 거짓말 없는 AI</p>
 </div>
 """, unsafe_allow_html=True)
 
