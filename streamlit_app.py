@@ -17,22 +17,18 @@ if "OPENAI_API_KEY" in st.secrets:
 INDEX_FILE = "./document_index.json"
 # ============================================
 
-# 페이지 설정
 st.set_page_config(
     page_title="Aide 1.0 beta - 성동구 전용",
     page_icon="🏛️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Streamlit 기본 요소 숨기기
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
-    [data-testid="collapsedControl"] {display: none;}
-    [data-testid="stSidebarCollapseButton"] {display: none;}
 </style>
 """, unsafe_allow_html=True)
 
