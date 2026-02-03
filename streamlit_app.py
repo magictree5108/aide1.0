@@ -34,16 +34,17 @@ st.markdown("""
     [data-testid="collapsedControl"] {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%);
         border-radius: 0.5rem;
-        padding: 0.5rem;
+        padding: 0.5rem 1rem;
         color: white !important;
     }
     
-    [data-testid="collapsedControl"] svg {
-        display: none;
+    [data-testid="collapsedControl"] svg,
+    [data-testid="collapsedControl"] span {
+        display: none !important;
     }
     
-    [data-testid="collapsedControl"]::before {
-        content: "☰ 메뉴";
+    [data-testid="collapsedControl"]::after {
+        content: "\\2630 메뉴";
         font-size: 0.9rem;
         font-weight: 600;
         color: white;
