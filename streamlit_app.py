@@ -38,8 +38,7 @@ st.markdown("""
         color: white !important;
     }
     
-    [data-testid="collapsedControl"] svg,
-    [data-testid="collapsedControl"] span {
+  [data-testid="collapsedControl"] * {
         display: none !important;
     }
     
