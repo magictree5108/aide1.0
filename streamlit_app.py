@@ -869,7 +869,7 @@ with col_main:
             
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
     
-chat_html += '</div>'
+    chat_html += '</div>'
     st.markdown(chat_html, unsafe_allow_html=True)
     
     # 문서 다운로드 버튼 (마지막 답변이 있을 때만)
