@@ -21,7 +21,7 @@ st.set_page_config(
     page_title="Aide 1.0 beta - 성동구 전용",
     page_icon="🏛️",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 st.markdown("""
@@ -29,26 +29,13 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
+    [data-testid="collapsedControl"] {display: none !important;}
+    [data-testid="stSidebarCollapseButton"] {display: none !important;}
     
-    /* 사이드바 토글 버튼 스타일 */
-    [data-testid="collapsedControl"] {
-        background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%);
-        border-radius: 0.5rem;
-        padding: 0.5rem 1rem;
-        color: white !important;
+    /* 모바일에서 사이드바 숨김 */
+    @media (max-width: 768px) {
+        [data-testid="stSidebar"] {display: none !important;}
     }
-    
-  [data-testid="collapsedControl"] * {
-        display: none !important;
-    }
-    
-  [data-testid="collapsedControl"]::after {
-        content: "MENU";
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: white;
-    }
-    
 </style>
 """, unsafe_allow_html=True)
 
