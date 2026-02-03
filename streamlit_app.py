@@ -29,6 +29,25 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display: none;}
+    
+    /* 사이드바 토글 버튼 스타일 */
+    [data-testid="collapsedControl"] {
+        background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%);
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        color: white !important;
+    }
+    
+    [data-testid="collapsedControl"] svg {
+        display: none;
+    }
+    
+    [data-testid="collapsedControl"]::before {
+        content: "☰ 메뉴";
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
