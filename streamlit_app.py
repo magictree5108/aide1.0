@@ -7,6 +7,11 @@ import os
 import requests
 import numpy as np
 from openai import OpenAI
+from docx import Document
+from docx.shared import Pt, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from io import BytesIO
+from datetime import datetime
 
 # ============================================
 # 설정
@@ -556,6 +561,125 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 및 자치법규 전문가 AI �
 - 항상 마지막에: "*AI 답변이므로 중요 사안은 원문을 반드시 확인하세요.*"
 """
 
+# ============================================
+# 문서 생성 함수들
+# ============================================
+
+def create_review_report(query, answer, sources, local_gov=""):
+    """검토 보고서 생성"""
+    doc = Document()
+    
+    # 제목
+    title = doc.add_heading('검 토 보 고 서', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # 기본 정보
+    doc.add_paragraph(f"작성일: {datetime.now().strftime('%Y년 %m월 %d일')}")
+    if local_gov:
+        doc.add_paragraph(f"작성기관: {local_gov}")
+    doc.add_paragraph("")
+    
+    # 검토 사항
+    doc.add_heading('1. 검토 사항', level=1)
+    doc.add_paragraph(query)
+    
+    # 검토 의견
+    doc.add_heading('2. 검토 의견', level=1)
+    doc.add_paragraph(answer)
+    
+    # 관련 법령
+    doc.add_heading('3. 관련 법령', level=1)
+    for src in sources:
+        p = doc.add_paragraph()
+        p.add_run(f"• {src['name']}").bold = True
+        p.add_run(f"\n  ({src['url']})")
+    
+    # 결론
+    doc.add_heading('4. 결론', level=1)
+    doc.add_paragraph("상기 검토 의견을 참고하시어 업무에 활용하시기 바랍니다.")
+    
+    doc.add_paragraph("")
+    doc.add_paragraph("※ 본 문서는 AI가 생성한 초안이므로, 중요 사안은 원문을 반드시 확인하시기 바랍니다.")
+    
+    # BytesIO로 반환
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_civil_response(query, answer, sources, local_gov=""):
+    """민원 답변서 생성"""
+    doc = Document()
+    
+    # 제목
+    title = doc.add_heading('민 원 답 변 서', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # 기본 정보
+    doc.add_paragraph(f"작성일: {datetime.now().strftime('%Y년 %m월 %d일')}")
+    if local_gov:
+        doc.add_paragraph(f"처리기관: {local_gov}")
+    doc.add_paragraph("")
+    
+    # 민원 내용
+    doc.add_heading('1. 민원 내용', level=1)
+    doc.add_paragraph(query)
+    
+    # 답변 내용
+    doc.add_heading('2. 답변 내용', level=1)
+    doc.add_paragraph("귀하의 민원에 대하여 아래와 같이 답변드립니다.")
+    doc.add_paragraph("")
+    doc.add_paragraph(answer)
+    
+    # 관련 법령
+    doc.add_heading('3. 관련 법령 및 근거', level=1)
+    for src in sources:
+        p = doc.add_paragraph()
+        p.add_run(f"• {src['name']}").bold = True
+    
+    # 마무리
+    doc.add_paragraph("")
+    doc.add_paragraph("기타 문의사항이 있으시면 담당 부서로 연락 주시기 바랍니다.")
+    doc.add_paragraph("")
+    doc.add_paragraph("※ 본 문서는 AI가 생성한 초안입니다.")
+    
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def create_internal_memo(query, answer, sources, local_gov=""):
+    """내부 메모 생성"""
+    doc = Document()
+    
+    # 제목
+    title = doc.add_heading('업 무 메 모', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # 기본 정보
+    doc.add_paragraph(f"작성일: {datetime.now().strftime('%Y년 %m월 %d일')}")
+    doc.add_paragraph(f"제목: {query[:50]}{'...' if len(query) > 50 else ''}")
+    doc.add_paragraph("")
+    
+    # 내용
+    doc.add_heading('내용', level=1)
+    doc.add_paragraph(answer)
+    
+    # 참고 법령
+    if sources:
+        doc.add_heading('참고 법령', level=1)
+        for src in sources:
+            doc.add_paragraph(f"• {src['name']}")
+    
+    doc.add_paragraph("")
+    doc.add_paragraph("※ AI 생성 초안")
+    
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
 
 def get_ai_response(messages, local_gov=""):
     user_query = messages[-1]['content']
@@ -745,8 +869,46 @@ with col_main:
             
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
     
-    chat_html += '</div>'
+chat_html += '</div>'
     st.markdown(chat_html, unsafe_allow_html=True)
+    
+    # 문서 다운로드 버튼 (마지막 답변이 있을 때만)
+    if st.session_state.messages and st.session_state.messages[-1]['role'] == 'assistant':
+        last_msg = st.session_state.messages[-1]
+        last_query = st.session_state.messages[-2]['content'] if len(st.session_state.messages) >= 2 else ""
+        sources = last_msg.get('sources', [])
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**📄 문서로 저장:**")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            review_doc = create_review_report(last_query, last_msg['content'], sources, st.session_state.local_gov)
+            st.download_button(
+                label="📋 검토보고서",
+                data=review_doc,
+                file_name=f"검토보고서_{datetime.now().strftime('%Y%m%d')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        
+        with col2:
+            civil_doc = create_civil_response(last_query, last_msg['content'], sources, st.session_state.local_gov)
+            st.download_button(
+                label="📝 민원답변서",
+                data=civil_doc,
+                file_name=f"민원답변서_{datetime.now().strftime('%Y%m%d')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+        
+        with col3:
+            memo_doc = create_internal_memo(last_query, last_msg['content'], sources, st.session_state.local_gov)
+            st.download_button(
+                label="📌 내부메모",
+                data=memo_doc,
+                file_name=f"내부메모_{datetime.now().strftime('%Y%m%d')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
     
     # 입력 영역
     st.markdown("<br>", unsafe_allow_html=True)
