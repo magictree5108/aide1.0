@@ -1,12 +1,11 @@
 """
-Aide 1.0 - 성동구 전용 (Streamlit 버전)
+Aide 1.0 - 공무원 AI 보좌관 (전국 버전)
 """
 import streamlit as st
 import json
 import os
-import glob
-import numpy as np
 import requests
+import numpy as np
 from openai import OpenAI
 
 # ============================================
@@ -15,16 +14,17 @@ from openai import OpenAI
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-INDEX_FILE = "./document_index.json"
 # ============================================
 
+# 페이지 설정
 st.set_page_config(
-    page_title="Aide 1.0 beta - 성동구 전용",
-    page_icon="🏛️",
+    page_title="Aide 1.0 beta - 공무원 AI 보좌관",
+    page_icon="⚖️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# Streamlit 기본 요소 숨기기
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -40,7 +40,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 커스텀 CSS - 세련된 디자인
+# 커스텀 CSS
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
@@ -186,51 +186,41 @@ st.markdown("""
         display: block;
         background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
         color: #1e40af;
-        padding: 0.4rem 0.8rem;
+        padding: 0.5rem 0.8rem;
         border-radius: 0.5rem;
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         font-weight: 500;
-        margin: 0.3rem 0;
+        margin: 0.4rem 0;
         border: 1px solid #93c5fd;
     }
     
-    .example-btn {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-        padding: 0.7rem 1rem;
-        border-radius: 0.75rem;
-        width: 100%;
-        text-align: left;
-        margin-bottom: 0.5rem;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .source-tag a {
+        color: #1e40af;
+        text-decoration: none;
     }
     
-    .example-btn:hover {
-        background: rgba(56, 189, 248, 0.2);
-        border-color: #38bdf8;
-        transform: translateX(4px);
+    .source-tag a:hover {
+        text-decoration: underline;
     }
     
-    .doc-item {
-        background: white;
-        border: 1px solid #e2e8f0;
-        padding: 0.75rem 1rem;
-        border-radius: 0.75rem;
-        margin-bottom: 0.5rem;
-        font-size: 0.8rem;
-        color: #475569;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .source-law {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+        border: 1px solid #fbbf24;
     }
     
-    .doc-item:hover {
-        background: #f0f9ff;
-        border-color: #0ea5e9;
-        color: #0369a1;
-        transform: translateX(4px);
+    .source-law a {
+        color: #92400e;
+    }
+    
+    .source-ordinance {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+        border: 1px solid #34d399;
+    }
+    
+    .source-ordinance a {
+        color: #065f46;
     }
     
     .status-badge {
@@ -245,12 +235,6 @@ st.markdown("""
         font-weight: 500;
         border: 1px solid #86efac;
         margin-bottom: 1.5rem;
-    }
-    
-    .status-badge-error {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #991b1b;
-        border-color: #fca5a5;
     }
     
     .footer-warning {
@@ -359,78 +343,16 @@ st.markdown("""
 def get_openai_client():
     return OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 문서 인덱스 로드 (여러 인덱스 파일 지원)
-@st.cache_data
-def load_documents():
-    all_docs = []
-    all_embeddings = []
-    
-    # 1. 기존 조례 인덱스 (document_index_part_*)
-    doc_parts = sorted(glob.glob("document_index_part_*"))
-    if doc_parts:
-        combined = b""
-        for pf in doc_parts:
-            with open(pf, 'rb') as f:
-                combined += f.read()
-        data = json.loads(combined.decode('utf-8'))
-        all_docs.extend(data.get('documents', []))
-        all_embeddings.extend(data.get('embeddings', []))
-    
-    # 2. 웹 크롤링 인덱스 (web_index_part_*)
-    web_parts = sorted(glob.glob("web_index_part_*"))
-    if web_parts:
-        combined = b""
-        for pf in web_parts:
-            with open(pf, 'rb') as f:
-                combined += f.read()
-        data = json.loads(combined.decode('utf-8'))
-        all_docs.extend(data.get('documents', []))
-        all_embeddings.extend(data.get('embeddings', []))
-    
-    # 3. 추가 인덱스 (extra_index_part_*) - 미래 확장용
-    extra_parts = sorted(glob.glob("extra_index_part_*"))
-    if extra_parts:
-        combined = b""
-        for pf in extra_parts:
-            with open(pf, 'rb') as f:
-                combined += f.read()
-        data = json.loads(combined.decode('utf-8'))
-        all_docs.extend(data.get('documents', []))
-        all_embeddings.extend(data.get('embeddings', []))
-    
-    # 4. 단일 파일 폴백 (로컬 테스트용)
-    if not all_docs:
-        for index_file in ["document_index.json", "web_index.json", "extra_index.json"]:
-            if os.path.exists(index_file):
-                with open(index_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    all_docs.extend(data.get('documents', []))
-                    all_embeddings.extend(data.get('embeddings', []))
-    
-    return all_docs, all_embeddings
-
-documents, embeddings = load_documents()
 client = get_openai_client()
 
 
-def get_embedding(text):
-    response = client.embeddings.create(
-        model="text-embedding-3-small",
-        input=text[:8000]
-    )
-    return response.data[0].embedding
+# ============================================
+# 국가법령정보센터 API 함수들
+# ============================================
 
-
-def cosine_similarity(a, b):
-    a = np.array(a)
-    b = np.array(b)
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
-# 국가법령 API 검색
-def search_law_api(query, num_results=3):
-    """법제처 OpenAPI로 법령 검색"""
+def search_law(query, num_results=5):
+    """국가법령정보센터 API - 법령 검색"""
     try:
-        # 법령 검색 API
         url = "http://www.law.go.kr/DRF/lawSearch.do"
         params = {
             "OC": "test",
@@ -440,7 +362,7 @@ def search_law_api(query, num_results=3):
             "display": num_results
         }
         
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return []
         
@@ -450,7 +372,6 @@ def search_law_api(query, num_results=3):
         if not laws:
             return []
         
-        # 단일 결과면 리스트로 변환
         if isinstance(laws, dict):
             laws = [laws]
         
@@ -458,122 +379,219 @@ def search_law_api(query, num_results=3):
         for law in laws[:num_results]:
             law_id = law.get("법령ID", "")
             law_name = law.get("법령명한글", "")
+            law_url = f"https://www.law.go.kr/법령/{law_name}"
             
-            if law_id:
+            if law_id and law_name:
                 # 법령 본문 조회
-                detail_url = "http://www.law.go.kr/DRF/lawService.do"
-                detail_params = {
-                    "OC": "test",
-                    "target": "law",
-                    "type": "JSON",
-                    "ID": law_id
-                }
-                
-                detail_resp = requests.get(detail_url, params=detail_params, timeout=5)
-                if detail_resp.status_code == 200:
-                    detail_data = detail_resp.json()
-                    law_info = detail_data.get("법령", {})
-                    
-                    # 조문 내용 추출
-                    articles = law_info.get("조문", {}).get("조문단위", [])
-                    if isinstance(articles, dict):
-                        articles = [articles]
-                    
-                    content = ""
-                    for art in articles[:5]:  # 처음 5개 조문만
-                        jo_num = art.get("조문번호", "")
-                        jo_title = art.get("조문제목", "")
-                        jo_content = art.get("조문내용", "")
-                        content += f"제{jo_num}조({jo_title}) {jo_content}\n"
-                    
-                    if content:
-                        results.append({
-                            "law_name": law_name,
-                            "content": content[:2000]
-                        })
+                detail = get_law_detail(law_id)
+                if detail:
+                    results.append({
+                        "type": "법령",
+                        "name": law_name,
+                        "content": detail,
+                        "url": law_url
+                    })
         
         return results
     
     except Exception as e:
-        print(f"법령 API 오류: {e}")
+        print(f"법령 검색 오류: {e}")
         return []
 
-def search_documents(query, n_results=10):
-    if not documents or not embeddings:
+
+def get_law_detail(law_id):
+    """법령 본문 조회"""
+    try:
+        url = "http://www.law.go.kr/DRF/lawService.do"
+        params = {
+            "OC": "test",
+            "target": "law",
+            "type": "JSON",
+            "ID": law_id
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            return ""
+        
+        data = response.json()
+        law_info = data.get("법령", {})
+        
+        # 조문 내용 추출
+        articles = law_info.get("조문", {}).get("조문단위", [])
+        if isinstance(articles, dict):
+            articles = [articles]
+        
+        content = ""
+        for art in articles[:10]:  # 처음 10개 조문
+            jo_num = art.get("조문번호", "")
+            jo_title = art.get("조문제목", "")
+            jo_content = art.get("조문내용", "")
+            if jo_content:
+                content += f"제{jo_num}조({jo_title}) {jo_content}\n\n"
+        
+        return content[:3000]
+    
+    except Exception as e:
+        print(f"법령 상세 조회 오류: {e}")
+        return ""
+
+
+def search_ordinance(query, local_gov="", num_results=5):
+    """국가법령정보센터 API - 자치법규(조례) 검색"""
+    try:
+        url = "http://www.law.go.kr/DRF/lawSearch.do"
+        params = {
+            "OC": "test",
+            "target": "ordin",
+            "type": "JSON",
+            "query": query,
+            "display": num_results
+        }
+        
+        if local_gov:
+            params["query"] = f"{local_gov} {query}"
+        
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            return []
+        
+        data = response.json()
+        ordins = data.get("LawSearch", {}).get("law", [])
+        
+        if not ordins:
+            return []
+        
+        if isinstance(ordins, dict):
+            ordins = [ordins]
+        
+        results = []
+        for ordin in ordins[:num_results]:
+            ordin_id = ordin.get("자치법규ID", "") or ordin.get("법령ID", "")
+            ordin_name = ordin.get("자치법규명한글", "") or ordin.get("법령명한글", "")
+            local_name = ordin.get("자치단체명", "") or ordin.get("지방자치단체명", "")
+            ordin_url = f"https://www.law.go.kr/자치법규/{ordin_name}"
+            
+            if ordin_name:
+                # 자치법규 본문 조회
+                detail = get_ordinance_detail(ordin_id)
+                results.append({
+                    "type": "자치법규",
+                    "name": f"[{local_name}] {ordin_name}" if local_name else ordin_name,
+                    "content": detail if detail else "(본문 조회 불가)",
+                    "url": ordin_url
+                })
+        
+        return results
+    
+    except Exception as e:
+        print(f"자치법규 검색 오류: {e}")
         return []
-    
-    # 1. 벡터 검색 (의미 기반)
-    query_embedding = get_embedding(query)
-    vector_scores = []
-    for i, emb in enumerate(embeddings):
-        score = cosine_similarity(query_embedding, emb)
-        vector_scores.append((i, score))
-    
-    # 2. 키워드 검색 (단어 매칭)
-    query_keywords = set(query.lower().replace('?', '').replace('.', '').split())
-    keyword_scores = []
-    for i, doc in enumerate(documents):
-        content = doc['content'].lower() + doc['filename'].lower()
-        matches = sum(1 for kw in query_keywords if kw in content)
-        keyword_scores.append((i, matches / max(len(query_keywords), 1)))
-    
-    # 3. 점수 합산 (벡터 70% + 키워드 30%)
-    combined_scores = []
-    for i in range(len(documents)):
-        v_score = vector_scores[i][1]
-        k_score = keyword_scores[i][1]
-        combined = (v_score * 0.7) + (k_score * 0.3)
-        combined_scores.append((i, combined))
-    
-    # 4. 정렬 및 상위 결과 반환
-    combined_scores.sort(key=lambda x: x[1], reverse=True)
-    top_indices = combined_scores[:n_results]
-    
-    results = []
-    for idx, score in top_indices:
-        results.append({
-            'content': documents[idx]['content'],
-            'filename': documents[idx]['filename'],
-            'score': float(score)
-        })
-    
-    return results
 
 
-SYSTEM_PROMPT = """당신은 성동구 조례 전문가 AI 보좌관입니다.
+def get_ordinance_detail(ordin_id):
+    """자치법규 본문 조회"""
+    try:
+        if not ordin_id:
+            return ""
+            
+        url = "http://www.law.go.kr/DRF/lawService.do"
+        params = {
+            "OC": "test",
+            "target": "ordin",
+            "type": "JSON",
+            "ID": ordin_id
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code != 200:
+            return ""
+        
+        data = response.json()
+        law_info = data.get("자치법규", {}) or data.get("법령", {})
+        
+        # 조문 내용 추출
+        articles = law_info.get("조문", {}).get("조문단위", [])
+        if isinstance(articles, dict):
+            articles = [articles]
+        
+        content = ""
+        for art in articles[:10]:
+            jo_num = art.get("조문번호", "")
+            jo_title = art.get("조문제목", "")
+            jo_content = art.get("조문내용", "")
+            if jo_content:
+                content += f"제{jo_num}조({jo_title}) {jo_content}\n\n"
+        
+        return content[:3000]
+    
+    except Exception as e:
+        print(f"자치법규 상세 조회 오류: {e}")
+        return ""
+
+
+# ============================================
+# AI 응답 생성
+# ============================================
+
+SYSTEM_PROMPT = """당신은 대한민국 법령 및 자치법규 전문가 AI 보좌관입니다.
+
 ## 핵심 원칙
-1. **추론**: 질문 의도를 파악해 관련 조례를 능동적으로 연결
-2. **근거 기반**: 답변 시 반드시 조례명, 조항 명시
-3. **유연한 탐색**: 직접적인 조례가 없으면 유사/상위 개념 조례 활용
-4. **상위법 안내**: 구 조례에 없으면 해당 상위법 안내
+1. **구체적 답변**: 검색된 법령/조례 내용을 직접 인용하여 답변
+2. **조문 명시**: "OO법 제O조에 따르면..." 형식으로 근거 제시
+3. **실무 중심**: 공무원이 바로 업무에 활용할 수 있도록 답변
+
 ## 답변 방식
-- 핵심 답변 먼저 → 근거 조항 → 실무 팁
-- 없는 경우: "성동구 조례에 직접 규정 없음. [관련 조례] 유추 적용 가능" 또는 "[상위법] 적용 필요"
-- 근거 없이 숫자(과태료, 기간 등) 지어내지 않음
-- 불확실하면 "확인 필요" 명시
+1. 핵심 답변 먼저 (구체적 기준, 금액, 기간 등 포함)
+2. 근거 조문 직접 인용
+3. 실무 팁 또는 유의사항
+
+## 금지 사항
+- "참조하시기 바랍니다", "확인하세요" 같은 떠넘기기 금지
+- 검색된 내용에 있으면 반드시 직접 설명
+- 검색 결과에 없는 숫자/기준 지어내기 금지
+- 없으면 "해당 내용은 검색 결과에 없습니다" 명시
+
+## 답변 마무리
+- 항상 마지막에: "*AI 답변이므로 중요 사안은 원문을 반드시 확인하세요.*"
 """
 
 
-def get_ai_response(messages):
+def get_ai_response(messages, local_gov=""):
     user_query = messages[-1]['content']
-    relevant_docs = search_documents(user_query, n_results=5)
     
+    # 1. 법령 검색
+    law_results = search_law(user_query, num_results=3)
+    
+    # 2. 자치법규 검색
+    ordinance_results = search_ordinance(user_query, local_gov=local_gov, num_results=3)
+    
+    # 컨텍스트 구성
     context = ""
-    if relevant_docs:
-        context = "\n\n## 검색된 성동구 자치법규:\n\n"
-        for i, doc in enumerate(relevant_docs, 1):
-            context += f"### [문서 {i}] {doc['filename']}\n"
-            context += f"{doc['content'][:2000]}\n\n"
-    else:
-        context = "\n\n(성동구 자치법규에서 관련 문서를 찾지 못했습니다.)\n"
+    all_sources = []
     
-    # 국가법령 API 검색 추가
-    law_results = search_law_api(user_query, num_results=2)
     if law_results:
-        context += "\n\n## 관련 국가법령 (상위법):\n\n"
+        context += "\n\n## 관련 법령:\n\n"
         for i, law in enumerate(law_results, 1):
-            context += f"### [국가법령 {i}] {law['law_name']}\n"
-            context += f"{law['content']}\n\n"
+            context += f"### [{law['name']}]\n{law['content']}\n\n"
+            all_sources.append({
+                "type": "법령",
+                "name": law['name'],
+                "url": law['url']
+            })
+    
+    if ordinance_results:
+        context += "\n\n## 관련 자치법규:\n\n"
+        for i, ordin in enumerate(ordinance_results, 1):
+            context += f"### [{ordin['name']}]\n{ordin['content']}\n\n"
+            all_sources.append({
+                "type": "자치법규",
+                "name": ordin['name'],
+                "url": ordin['url']
+            })
+    
+    if not context:
+        context = "\n\n(관련 법령 및 자치법규를 찾지 못했습니다.)\n"
     
     full_messages = [
         {"role": "system", "content": SYSTEM_PROMPT + context},
@@ -586,17 +604,18 @@ def get_ai_response(messages):
         temperature=0.7
     )
     
-sources = [doc['filename'] for doc in relevant_docs]
-    for law in law_results:
-        sources.append(f"[국가법령] {law['law_name']}")
-    
-    return response.choices[0].message.content, sources
+    return response.choices[0].message.content, all_sources
 
+
+# ============================================
 # 세션 상태 초기화
+# ============================================
 if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'input_text' not in st.session_state:
     st.session_state.input_text = ""
+if 'local_gov' not in st.session_state:
+    st.session_state.local_gov = ""
 
 
 # ============================================
@@ -605,35 +624,46 @@ if 'input_text' not in st.session_state:
 with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 1rem 0 1.5rem 0;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏛️</div>
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚖️</div>
         <div style="font-size: 1.5rem; font-weight: 700;">Aide 1.0 beta</div>
-        <div style="font-size: 0.8rem; opacity: 0.7;">신뢰할 수 있는 공공업무 특화 Chat bot</div>
+        <div style="font-size: 0.8rem; opacity: 0.7;">공무원 AI 법령 보좌관</div>
     </div>
     """, unsafe_allow_html=True)
     
+    st.markdown('<div class="section-title">🏛️ 지자체 설정 (선택)</div>', unsafe_allow_html=True)
+    
+    local_gov = st.text_input(
+        "소속 지자체",
+        value=st.session_state.local_gov,
+        placeholder="예: 서울특별시 성동구",
+        help="입력하면 해당 지자체 조례 우선 검색"
+    )
+    st.session_state.local_gov = local_gov
+    
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<div class="section-title">📖 이용 가이드</div>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="guide-card">
-        <div class="guide-card-icon">💡</div>
-        <div class="guide-card-title">이렇게 질문하세요</div>
-        <div class="guide-card-text">구체적인 조례명이나 키워드로 질문하면 더 정확한 답변을 받을 수 있습니다.</div>
+        <div class="guide-card-icon">🔍</div>
+        <div class="guide-card-title">실시간 법령 검색</div>
+        <div class="guide-card-text">국가법령정보센터 API를 통해 최신 법령과 자치법규를 실시간 검색합니다.</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("""
     <div class="guide-card">
         <div class="guide-card-icon">📋</div>
-        <div class="guide-card-title">출처 확인</div>
-        <div class="guide-card-text">모든 답변에는 참조한 문서가 표시됩니다. 원문 확인이 필요하면 해당 조례를 찾아보세요.</div>
+        <div class="guide-card-title">출처 링크 제공</div>
+        <div class="guide-card-text">모든 답변에 국가법령정보센터 링크가 포함됩니다.</div>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("""
     <div class="guide-card">
-        <div class="guide-card-icon">🔄</div>
-        <div class="guide-card-title">대화 이어가기</div>
-        <div class="guide-card-text">추가 질문이나 관련 내용을 이어서 물어볼 수 있습니다.</div>
+        <div class="guide-card-icon">🏛️</div>
+        <div class="guide-card-title">지자체 설정</div>
+        <div class="guide-card-text">소속 지자체를 입력하면 해당 자치법규를 우선 검색합니다.</div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -641,10 +671,10 @@ with st.sidebar:
     st.markdown('<div class="section-title">⚡ 예시 질문</div>', unsafe_allow_html=True)
     
     example_questions = [
-        "자원봉사자 간병비 지원 신청 방법은?",
-        "장기요양기관 지정 심사 기준이 뭐야?",
-        "세무조사 범위 확대 통지 절차는?",
-        "공유오피스 이용료가 얼마야?",
+        "건축물 높이 제한 기준은?",
+        "개인정보 보유기간 규정은?",
+        "민원 처리 기한이 며칠이야?",
+        "공무원 징계 종류 알려줘",
     ]
     
     for q in example_questions:
@@ -656,8 +686,8 @@ with st.sidebar:
     
     st.markdown("""
     <div class="contact-card">
-        <div class="contact-card-title">📞문의사항or피드백 있으신가요?</div>
-        <div class="contact-card-text">개발자(정호원): 010-8829-5108</div>
+        <div class="contact-card-title">📞 피드백 환영!</div>
+        <div class="contact-card-text">개발자: 010-8829-5108</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -669,8 +699,8 @@ with st.sidebar:
 # 헤더
 st.markdown("""
 <div class="main-header">
-    <h1>🏛️ Aide 1.0 beta <span class="header-badge">성동구 전용</span></h1>
-    <p>신뢰할 수 있는 공공업무 특화 Chat bot - 철저한 근거 중심, 거짓말 없는 AI</p>
+    <h1>⚖️ Aide 1.0 beta <span class="header-badge">공무원 AI 보좌관</span></h1>
+    <p>국가법령정보센터 API 기반 실시간 법령 검색 · 근거 중심 답변 · 출처 링크 제공</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -679,20 +709,12 @@ col_main = st.container()
 
 with col_main:
     # 상태 표시
-    if documents:
-        st.markdown(f"""
-        <div class="status-badge">
-            <span>✅</span>
-            <span>준비 완료! {len(documents)}개 자치법규 및 공문서 학습됨</span>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="status-badge status-badge-error">
-            <span>⚠️</span>
-            <span>문서가 없습니다. index_documents.py를 먼저 실행하세요.</span>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="status-badge">
+        <span>✅</span>
+        <span>국가법령정보센터 API 연동 완료 · 전국 법령 및 자치법규 실시간 검색</span>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 채팅 영역
     chat_html = '<div class="chat-container">'
@@ -700,9 +722,10 @@ with col_main:
     if not st.session_state.messages:
         chat_html += """
         <div class="ai-message">
-            <strong>안녕하세요! 성동구 조례 AI 보좌관입니다. 👋</strong><br><br>
-            성동구의 <strong>조례, 규칙, 서식</strong> 등을 학습했습니다.<br>
-            업무 관련 질문을 편하게 해주세요!
+            <strong>안녕하세요! 공무원 AI 법령 보좌관입니다. ⚖️</strong><br><br>
+            <strong>국가법령정보센터 API</strong>를 통해 전국의 법령과 자치법규를 실시간 검색합니다.<br>
+            업무 관련 법령 질문을 편하게 해주세요!<br><br>
+            💡 <strong>팁:</strong> 왼쪽에서 소속 지자체를 설정하면 해당 지역 조례를 우선 검색합니다.
         </div>
         """
     
@@ -710,12 +733,16 @@ with col_main:
         if msg['role'] == 'user':
             chat_html += f'<div class="user-message">{msg["content"]}</div>'
         else:
+            # 출처 표시
             sources_html = ""
             if 'sources' in msg and msg['sources']:
-                sources_html = "<br><br><small>📎 참조 문서:</small><br>"
-                for s in list(set(msg['sources']))[:5]:
-                    full_name = s.replace('.hwpx', '').replace('.pdf', '')
-                    sources_html += f'<div class="source-tag">{full_name}</div>'
+                sources_html = "<br><br><strong>📎 참조 법령:</strong><br>"
+                for src in msg['sources']:
+                    if src['type'] == '법령':
+                        sources_html += f'<div class="source-tag source-law"><a href="{src["url"]}" target="_blank">📜 {src["name"]}</a></div>'
+                    else:
+                        sources_html += f'<div class="source-tag source-ordinance"><a href="{src["url"]}" target="_blank">📋 {src["name"]}</a></div>'
+            
             chat_html += f'<div class="ai-message">{msg["content"]}{sources_html}</div>'
     
     chat_html += '</div>'
@@ -730,7 +757,7 @@ with col_main:
         user_input = st.text_area(
             "질문 입력",
             value=st.session_state.input_text,
-            placeholder="조례에 대해 질문하세요...",
+            placeholder="법령에 대해 질문하세요...",
             height=80,
             label_visibility="collapsed"
         )
@@ -745,9 +772,12 @@ with col_main:
             'content': user_input.strip()
         })
         
-        with st.spinner("🔍 조례 검색 및 답변 생성 중..."):
+        with st.spinner("🔍 법령 검색 및 답변 생성 중..."):
             try:
-                response, sources = get_ai_response(st.session_state.messages)
+                response, sources = get_ai_response(
+                    st.session_state.messages, 
+                    local_gov=st.session_state.local_gov
+                )
                 st.session_state.messages.append({
                     'role': 'assistant',
                     'content': response,
@@ -756,7 +786,8 @@ with col_main:
             except Exception as e:
                 st.session_state.messages.append({
                     'role': 'assistant',
-                    'content': f"⚠️ 오류가 발생했습니다: {str(e)}"
+                    'content': f"⚠️ 오류가 발생했습니다: {str(e)}",
+                    'sources': []
                 })
         
         st.session_state.input_text = ""
@@ -765,7 +796,7 @@ with col_main:
     # 면책 문구
     st.markdown("""
     <div class="footer-warning">
-        ⚠️ Aide 1.0 beta는 성동구 조례를 바탕으로 신뢰성 있는 답변을 제공하지만 실수를 할 수 있습니다.<br>
-        중요한 결정 시 원문을 반드시 확인하세요.
+        ⚠️ Aide는 국가법령정보센터 API를 통해 법령을 검색하지만, AI 답변은 실수가 있을 수 있습니다.<br>
+        중요한 결정 시 <strong>국가법령정보센터</strong>에서 원문을 반드시 확인하세요.
     </div>
     """, unsafe_allow_html=True)
