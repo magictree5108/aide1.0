@@ -43,12 +43,13 @@ st.markdown("""
         display: none !important;
     }
     
-    [data-testid="collapsedControl"]::after {
-        content: "\\2630 메뉴";
+  [data-testid="collapsedControl"]::after {
+        content: "MENU";
         font-size: 0.9rem;
         font-weight: 600;
         color: white;
     }
+    
 </style>
 """, unsafe_allow_html=True)
 
