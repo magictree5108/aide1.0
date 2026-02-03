@@ -6,6 +6,7 @@ import json
 import os
 import glob
 import numpy as np
+import requests
 from openai import OpenAI
 
 # ============================================
@@ -425,6 +426,77 @@ def cosine_similarity(a, b):
     b = np.array(b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
+# 국가법령 API 검색
+def search_law_api(query, num_results=3):
+    """법제처 OpenAPI로 법령 검색"""
+    try:
+        # 법령 검색 API
+        url = "http://www.law.go.kr/DRF/lawSearch.do"
+        params = {
+            "OC": "test",
+            "target": "law",
+            "type": "JSON",
+            "query": query,
+            "display": num_results
+        }
+        
+        response = requests.get(url, params=params, timeout=5)
+        if response.status_code != 200:
+            return []
+        
+        data = response.json()
+        laws = data.get("LawSearch", {}).get("law", [])
+        
+        if not laws:
+            return []
+        
+        # 단일 결과면 리스트로 변환
+        if isinstance(laws, dict):
+            laws = [laws]
+        
+        results = []
+        for law in laws[:num_results]:
+            law_id = law.get("법령ID", "")
+            law_name = law.get("법령명한글", "")
+            
+            if law_id:
+                # 법령 본문 조회
+                detail_url = "http://www.law.go.kr/DRF/lawService.do"
+                detail_params = {
+                    "OC": "test",
+                    "target": "law",
+                    "type": "JSON",
+                    "ID": law_id
+                }
+                
+                detail_resp = requests.get(detail_url, params=detail_params, timeout=5)
+                if detail_resp.status_code == 200:
+                    detail_data = detail_resp.json()
+                    law_info = detail_data.get("법령", {})
+                    
+                    # 조문 내용 추출
+                    articles = law_info.get("조문", {}).get("조문단위", [])
+                    if isinstance(articles, dict):
+                        articles = [articles]
+                    
+                    content = ""
+                    for art in articles[:5]:  # 처음 5개 조문만
+                        jo_num = art.get("조문번호", "")
+                        jo_title = art.get("조문제목", "")
+                        jo_content = art.get("조문내용", "")
+                        content += f"제{jo_num}조({jo_title}) {jo_content}\n"
+                    
+                    if content:
+                        results.append({
+                            "law_name": law_name,
+                            "content": content[:2000]
+                        })
+        
+        return results
+    
+    except Exception as e:
+        print(f"법령 API 오류: {e}")
+        return []
 
 def search_documents(query, n_results=10):
     if not documents or not embeddings:
@@ -490,12 +562,20 @@ def get_ai_response(messages):
     
     context = ""
     if relevant_docs:
-        context = "\n\n## 검색된 관련 문서:\n\n"
+        context = "\n\n## 검색된 성동구 자치법규:\n\n"
         for i, doc in enumerate(relevant_docs, 1):
             context += f"### [문서 {i}] {doc['filename']}\n"
             context += f"{doc['content'][:2000]}\n\n"
     else:
-        context = "\n\n(관련 문서를 찾지 못했습니다.)\n"
+        context = "\n\n(성동구 자치법규에서 관련 문서를 찾지 못했습니다.)\n"
+    
+    # 국가법령 API 검색 추가
+    law_results = search_law_api(user_query, num_results=2)
+    if law_results:
+        context += "\n\n## 관련 국가법령 (상위법):\n\n"
+        for i, law in enumerate(law_results, 1):
+            context += f"### [국가법령 {i}] {law['law_name']}\n"
+            context += f"{law['content']}\n\n"
     
     full_messages = [
         {"role": "system", "content": SYSTEM_PROMPT + context},
@@ -508,8 +588,11 @@ def get_ai_response(messages):
         temperature=0.7
     )
     
-    return response.choices[0].message.content, [doc['filename'] for doc in relevant_docs]
-
+sources = [doc['filename'] for doc in relevant_docs]
+    for law in law_results:
+        sources.append(f"[국가법령] {law['law_name']}")
+    
+    return response.choices[0].message.content, sources
 
 # 세션 상태 초기화
 if 'messages' not in st.session_state:
