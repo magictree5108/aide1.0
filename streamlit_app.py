@@ -14,7 +14,7 @@ if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 # 법제처 API 설정
-API_OC = "test"  # 실서비스시 발급받은 OC로 변경
+API_OC = "howon0411"  # 실서비스시 발급받은 OC로 변경
 
 # ============================================
 # 정확한 API URL (법제처 공식 가이드 기준)
