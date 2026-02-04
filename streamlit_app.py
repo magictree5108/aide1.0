@@ -857,7 +857,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>⚖️ Aide 1.0 <span class="header-badge">공무원 AI 보좌관</span></h1>
-    <p>법령 · 판례 · 해석례 · 행정규칙 통합 검색 | 법제처 Open API</p>
+    <p>국가법령 기반 신뢰성있는 답변을 제공합니다.</p>
 </div>
 """, unsafe_allow_html=True)
 
