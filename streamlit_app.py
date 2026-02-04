@@ -601,36 +601,37 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 전문가 AI입니다.
 
 
 def extract_search_keywords(user_query):
-    """GPT로 검색 키워드 추출 - 핵심 단어 1~2개만"""
+    """GPT로 검색 키워드 추출 - 관련 법령명 포함"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": """법령 검색용 핵심 키워드를 추출하세요.
+                {"role": "system", "content": """법령 검색용 키워드를 추출하세요.
 
 규칙:
-1. 가장 핵심적인 명사 1~2개만 (최대 2단어)
-2. 길면 검색 안 됨. 짧게!
-3. 지역명은 별도로 뒤에 추가
+1. 핵심 키워드 1~2개 추출
+2. 관련될 수 있는 법령명도 추출 (있다면)
+3. 쉼표로 구분
 
 예시:
-- "예비군 편성 의무기간 알려줘" → "예비군"
-- "건축허가 요건이 뭐야?" → "건축허가"
-- "개인정보 보유기간 규정" → "개인정보"
-- "성동구 주차장 설치 기준" → "주차장, 성동구"
-- "공무원 징계 종류 알려줘" → "공무원 징계"
-- "음식점 영업신고 절차" → "영업신고"
+- "공무원 휴가일수 몇일?" → "공무원 복무규정, 연가"
+- "예비군 편성 의무기간" → "예비군"
+- "건축허가 요건이 뭐야?" → "건축법"
+- "개인정보 보유기간 규정" → "개인정보보호법"
+- "음식점 영업신고 절차" → "식품위생법, 영업신고"
+- "공무원 징계 종류" → "공무원 징계, 국가공무원법"
+- "주차장 설치 기준" → "주차장법"
+- "사기업 경력 연가" → "공무원 복무규정"
 
 키워드만 출력:"""},
                 {"role": "user", "content": user_query}
             ],
-            max_tokens=30,
+            max_tokens=50,
             temperature=0
         )
         keywords = response.choices[0].message.content.strip()
         return keywords
     except:
-        # 실패시 첫 2단어만
         words = user_query.split()[:2]
         return " ".join(words)
 
@@ -642,63 +643,54 @@ def get_ai_response(messages, local_gov=""):
     keywords = extract_search_keywords(user_query)
     keyword_list = [k.strip() for k in keywords.split(",")]
     
-    # 메인 키워드 (첫 번째)
+    all_sources = []
+    context = "\n\n[검색 결과]"
+    
+    # 각 키워드로 검색 (중복 제거)
+    searched_names = set()
+    
+    for keyword in keyword_list[:3]:  # 최대 3개 키워드
+        if not keyword:
+            continue
+            
+        # 법령 검색
+        law_results = search_law(keyword, 2)
+        for r in law_results:
+            if r['name'] not in searched_names:
+                searched_names.add(r['name'])
+                context += f"\n\n### 「{r['name']}」\n{r['content']}"
+                all_sources.append(r)
+        
+        # 자치법규 검색
+        ordinance_results = search_ordinance(keyword, local_gov, 2)
+        for r in ordinance_results:
+            if r['name'] not in searched_names:
+                searched_names.add(r['name'])
+                context += f"\n\n### {r['name']}\n{r['content']}"
+                all_sources.append(r)
+    
+    # 첫 번째 키워드로 판례/해석례/심판례/행정규칙 검색
     main_keyword = keyword_list[0] if keyword_list else user_query
     
-    # 지역명 확인 (키워드에서 또는 local_gov에서)
-    region = local_gov
-    for kw in keyword_list:
-        if any(loc in kw for loc in ["시", "구", "군", "도"]):
-            region = kw
-            break
-    
-    # 6개 API 검색 (추출된 키워드로)
-    law_results = search_law(main_keyword, 2)
-    ordinance_results = search_ordinance(main_keyword, region, 3)
     precedent_results = search_precedent(main_keyword, 2)
+    for r in precedent_results:
+        context += f"\n\n### [판례] {r['name']}\n{r['content']}"
+        all_sources.append(r)
+    
     interpretation_results = search_interpretation(main_keyword, 2)
+    for r in interpretation_results:
+        context += f"\n\n### [법령해석례] {r['name']}\n{r['content']}"
+        all_sources.append(r)
+    
     admin_judge_results = search_admin_judge(main_keyword, 2)
+    for r in admin_judge_results:
+        context += f"\n\n### [행정심판례] {r['name']}\n{r['content']}"
+        all_sources.append(r)
+    
     admin_rule_results = search_admin_rule(main_keyword, 2)
-    
-    # 컨텍스트 구성
-    context = "\n\n[검색 결과]"
-    all_sources = []
-    
-    if law_results:
-        context += "\n\n## 관련 법령:\n"
-        for r in law_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
-    
-    if ordinance_results:
-        context += "\n\n## 관련 자치법규:\n"
-        for r in ordinance_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
-    
-    if precedent_results:
-        context += "\n\n## 관련 판례:\n"
-        for r in precedent_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
-    
-    if interpretation_results:
-        context += "\n\n## 관련 법령해석례:\n"
-        for r in interpretation_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
-    
-    if admin_judge_results:
-        context += "\n\n## 관련 행정심판례:\n"
-        for r in admin_judge_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
-    
-    if admin_rule_results:
-        context += "\n\n## 관련 행정규칙:\n"
-        for r in admin_rule_results:
-            context += f"### {r['name']}\n{r['content']}\n"
-            all_sources.append(r)
+    for r in admin_rule_results:
+        context += f"\n\n### [행정규칙] {r['name']}\n{r['content']}"
+        all_sources.append(r)
     
     if not all_sources:
         context += "\n\n(검색 결과 없음)\n"
