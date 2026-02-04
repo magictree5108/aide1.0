@@ -578,35 +578,38 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 검색 AI입니다.
 
 
 def extract_search_keywords(user_query):
-    """GPT로 검색 키워드 추출"""
+    """GPT로 검색 키워드 추출 - 핵심 단어 1~2개만"""
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": """사용자 질문에서 법령 검색용 키워드를 추출하세요.
+                {"role": "system", "content": """법령 검색용 핵심 키워드를 추출하세요.
 
 규칙:
-1. 핵심 명사 1~3개만 추출
-2. "조례", "법", "규정", "알려줘", "뭐야" 등 불필요한 단어 제거
-3. 지역명(성동구, 서울시 등)은 별도로 추출
-4. 쉼표로 구분하여 출력
+1. 가장 핵심적인 명사 1~2개만 (최대 2단어)
+2. 길면 검색 안 됨. 짧게!
+3. 지역명은 별도로 뒤에 추가
 
 예시:
-- "성동구 민방위 대원 교육 조례 알려줘" → "민방위 교육, 성동구"
+- "예비군 편성 의무기간 알려줘" → "예비군"
 - "건축허가 요건이 뭐야?" → "건축허가"
-- "개인정보 보유기간 규정" → "개인정보 보유기간"
-- "서울시 주차장 설치 기준" → "주차장 설치, 서울시"
+- "개인정보 보유기간 규정" → "개인정보"
+- "성동구 주차장 설치 기준" → "주차장, 성동구"
+- "공무원 징계 종류 알려줘" → "공무원 징계"
+- "음식점 영업신고 절차" → "영업신고"
 
-키워드만 출력 (설명 없이):"""},
+키워드만 출력:"""},
                 {"role": "user", "content": user_query}
             ],
-            max_tokens=50,
+            max_tokens=30,
             temperature=0
         )
         keywords = response.choices[0].message.content.strip()
         return keywords
     except:
-        return user_query
+        # 실패시 첫 2단어만
+        words = user_query.split()[:2]
+        return " ".join(words)
 
 
 def get_ai_response(messages, local_gov=""):
