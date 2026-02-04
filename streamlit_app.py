@@ -585,16 +585,62 @@ SYSTEM_PROMPT = """당신은 대한민국 법령 검색 AI입니다.
 """
 
 
+def extract_search_keywords(user_query):
+    """GPT로 검색 키워드 추출"""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": """사용자 질문에서 법령 검색용 키워드를 추출하세요.
+
+규칙:
+1. 핵심 명사 1~3개만 추출
+2. "조례", "법", "규정", "알려줘", "뭐야" 등 불필요한 단어 제거
+3. 지역명(성동구, 서울시 등)은 별도로 추출
+4. 쉼표로 구분하여 출력
+
+예시:
+- "성동구 민방위 대원 교육 조례 알려줘" → "민방위 교육, 성동구"
+- "건축허가 요건이 뭐야?" → "건축허가"
+- "개인정보 보유기간 규정" → "개인정보 보유기간"
+- "서울시 주차장 설치 기준" → "주차장 설치, 서울시"
+
+키워드만 출력 (설명 없이):"""},
+                {"role": "user", "content": user_query}
+            ],
+            max_tokens=50,
+            temperature=0
+        )
+        keywords = response.choices[0].message.content.strip()
+        return keywords
+    except:
+        return user_query
+
+
 def get_ai_response(messages, local_gov=""):
     user_query = messages[-1]['content']
     
-    # 6개 API 검색
-    law_results = search_law(user_query, 2)
-    ordinance_results = search_ordinance(user_query, local_gov, 2)
-    precedent_results = search_precedent(user_query, 2)
-    interpretation_results = search_interpretation(user_query, 2)
-    admin_judge_results = search_admin_judge(user_query, 2)
-    admin_rule_results = search_admin_rule(user_query, 2)
+    # 1단계: 검색 키워드 추출
+    keywords = extract_search_keywords(user_query)
+    keyword_list = [k.strip() for k in keywords.split(",")]
+    
+    # 메인 키워드 (첫 번째)
+    main_keyword = keyword_list[0] if keyword_list else user_query
+    
+    # 지역명 확인 (키워드에서 또는 local_gov에서)
+    region = local_gov
+    for kw in keyword_list:
+        if any(loc in kw for loc in ["시", "구", "군", "도"]):
+            region = kw
+            break
+    
+    # 6개 API 검색 (추출된 키워드로)
+    law_results = search_law(main_keyword, 2)
+    ordinance_results = search_ordinance(main_keyword, region, 3)
+    precedent_results = search_precedent(main_keyword, 2)
+    interpretation_results = search_interpretation(main_keyword, 2)
+    admin_judge_results = search_admin_judge(main_keyword, 2)
+    admin_rule_results = search_admin_rule(main_keyword, 2)
     
     # 컨텍스트 구성
     context = "\n\n[검색 결과]"
