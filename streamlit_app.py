@@ -197,6 +197,7 @@ def get_law_detail(law_mst):
         root = ET.fromstring(response.content)
         content = ""
         
+        # 방법1: <조문단위> 태그
         for article in root.findall(".//조문단위")[:15]:
             jo_num = get_text(article, "조문번호")
             jo_title = get_text(article, "조문제목")
@@ -205,6 +206,14 @@ def get_law_detail(law_mst):
             if jo_content:
                 title_str = f"({jo_title})" if jo_title else ""
                 content += f"제{jo_num}조{title_str} {jo_content}\n\n"
+        
+        # 방법2: <조> 태그 (혹시 모를 경우)
+        if not content:
+            for article in root.findall(".//조")[:15]:
+                jo_title = get_text(article, "조제목")
+                jo_content = get_text(article, "조내용")
+                if jo_content:
+                    content += f"{jo_content}\n\n"
         
         return content[:4000] if content else ""
     except:
@@ -266,14 +275,22 @@ def get_ordinance_detail(ordin_mst):
         root = ET.fromstring(response.content)
         content = ""
         
+        # 방법1: <조문단위> 태그
         for article in root.findall(".//조문단위")[:15]:
             jo_num = get_text(article, "조문번호")
             jo_title = get_text(article, "조문제목")
             jo_content = get_text(article, "조문내용")
-            
             if jo_content:
                 title_str = f"({jo_title})" if jo_title else ""
                 content += f"제{jo_num}조{title_str} {jo_content}\n\n"
+        
+        # 방법2: <조> 태그 (자치법규용)
+        if not content:
+            for article in root.findall(".//조")[:15]:
+                jo_title = get_text(article, "조제목")
+                jo_content = get_text(article, "조내용")
+                if jo_content:
+                    content += f"{jo_content}\n\n"
         
         return content[:4000] if content else ""
     except:
@@ -685,9 +702,6 @@ def get_ai_response(messages, local_gov=""):
     
     if not all_sources:
         context += "\n\n(검색 결과 없음)\n"
-    else:
-        # 디버깅용
-        context += f"\n\n(총 {len(all_sources)}개 검색됨)\n"
     
     full_messages = [
         {"role": "system", "content": SYSTEM_PROMPT + context},
@@ -822,10 +836,6 @@ with col_btn:
 
 if send_clicked and user_input.strip():
     st.session_state.messages.append({'role': 'user', 'content': user_input.strip()})
-    
-    # 디버깅: 검색 키워드 표시
-    keywords = extract_search_keywords(user_input.strip())
-    st.info(f"🔍 검색 키워드: {keywords}")
     
     with st.spinner("🔍 법령 · 판례 · 해석례 검색 중..."):
         try:
