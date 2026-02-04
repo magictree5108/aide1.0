@@ -684,6 +684,9 @@ def get_ai_response(messages, local_gov=""):
     
     if not all_sources:
         context += "\n\n(검색 결과 없음)\n"
+    else:
+        # 디버깅용
+        context += f"\n\n(총 {len(all_sources)}개 검색됨)\n"
     
     full_messages = [
         {"role": "system", "content": SYSTEM_PROMPT + context},
@@ -818,6 +821,10 @@ with col_btn:
 
 if send_clicked and user_input.strip():
     st.session_state.messages.append({'role': 'user', 'content': user_input.strip()})
+    
+    # 디버깅: 검색 키워드 표시
+    keywords = extract_search_keywords(user_input.strip())
+    st.info(f"🔍 검색 키워드: {keywords}")
     
     with st.spinner("🔍 법령 · 판례 · 해석례 검색 중..."):
         try:
