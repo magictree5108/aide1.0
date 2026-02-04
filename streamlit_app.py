@@ -1,10 +1,11 @@
 """
 Aide 1.0 - 공무원 AI 보좌관
-법제처 Open API 정확한 연동
+법제처 Open API (XML 방식)
 """
 import streamlit as st
 import os
 import requests
+import xml.etree.ElementTree as ET
 from openai import OpenAI
 
 # ============================================
@@ -13,31 +14,7 @@ from openai import OpenAI
 if "OPENAI_API_KEY" in st.secrets:
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
-# 법제처 API 설정
-API_OC = "howon0411"  # 실서비스시 발급받은 OC로 변경
-
-# ============================================
-# 정확한 API URL (법제처 공식 가이드 기준)
-# ============================================
-# 목록 조회: lawSearch.do
-# 본문 조회: lawService.do
-#
-# [목록 조회 target]
-# law      - 법령 목록
-# ordin    - 자치법규 목록
-# prec     - 판례 목록
-# expc     - 법령해석례 목록
-# decc     - 행정심판례 목록
-# admrul   - 행정규칙 목록
-#
-# [본문 조회 target]
-# eflaw    - 법령 본문 (시행일 기준)
-# ordin    - 자치법규 본문
-# prec     - 판례 본문
-# expc     - 법령해석례 본문
-# decc     - 행정심판례 본문
-# admrul   - 행정규칙 본문
-# ============================================
+API_OC = "howon0411"
 
 # 페이지 설정
 st.set_page_config(
@@ -55,7 +32,6 @@ st.markdown("""
     .stDeployButton {display: none;}
     [data-testid="collapsedControl"] {display: none !important;}
     [data-testid="stSidebarCollapseButton"] {display: none !important;}
-    
     @media (max-width: 768px) {
         [data-testid="stSidebar"] {display: none !important;}
     }
@@ -66,169 +42,81 @@ st.markdown("""
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
-    
-    html, body, [class*="st-"] {
-        font-family: 'Noto Sans KR', sans-serif;
-    }
-    
-    .stApp {
-        background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
-    }
-    
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%);
-    }
-    
-    [data-testid="stSidebar"] * {
-        color: white !important;
-    }
-    
+    html, body, [class*="st-"] { font-family: 'Noto Sans KR', sans-serif; }
+    .stApp { background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%); }
+    [data-testid="stSidebar"] { background: linear-gradient(180deg, #1e3a5f 0%, #0f172a 100%); }
+    [data-testid="stSidebar"] * { color: white !important; }
     .main-header {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 50%, #4f46e5 100%);
-        padding: 2rem 2.5rem;
-        border-radius: 1.25rem;
-        margin-bottom: 2rem;
-        color: white;
-        box-shadow: 0 10px 40px -10px rgba(30, 64, 175, 0.4);
+        padding: 2rem 2.5rem; border-radius: 1.25rem; margin-bottom: 2rem;
+        color: white; box-shadow: 0 10px 40px -10px rgba(30, 64, 175, 0.4);
     }
-    
     .main-header h1 { margin: 0; font-size: 2rem; font-weight: 700; }
     .main-header p { margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1rem; }
-    
     .header-badge {
-        display: inline-block;
-        background: rgba(255,255,255,0.2);
-        padding: 0.35rem 1rem;
-        border-radius: 2rem;
-        font-size: 0.8rem;
-        margin-left: 0.75rem;
-        border: 1px solid rgba(255,255,255,0.3);
+        display: inline-block; background: rgba(255,255,255,0.2);
+        padding: 0.35rem 1rem; border-radius: 2rem; font-size: 0.8rem;
+        margin-left: 0.75rem; border: 1px solid rgba(255,255,255,0.3);
     }
-    
     .chat-container {
-        background: white;
-        border-radius: 1.25rem;
-        padding: 1.5rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-        border: 1px solid #e2e8f0;
-        min-height: 400px;
-        max-height: 500px;
-        overflow-y: auto;
+        background: white; border-radius: 1.25rem; padding: 1.5rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;
+        min-height: 400px; max-height: 500px; overflow-y: auto;
     }
-    
     .user-message {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%);
-        color: white;
-        padding: 1rem 1.25rem;
+        color: white; padding: 1rem 1.25rem;
         border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
-        margin: 0.75rem 0 0.75rem 25%;
-        font-size: 0.95rem;
-        line-height: 1.6;
+        margin: 0.75rem 0 0.75rem 25%; font-size: 0.95rem; line-height: 1.6;
     }
-    
     .ai-message {
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        color: #1e293b;
-        padding: 1.25rem 1.5rem;
+        color: #1e293b; padding: 1.25rem 1.5rem;
         border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
-        margin: 0.75rem 25% 0.75rem 0;
-        border: 1px solid #e2e8f0;
-        font-size: 0.95rem;
-        line-height: 1.7;
+        margin: 0.75rem 25% 0.75rem 0; border: 1px solid #e2e8f0;
+        font-size: 0.95rem; line-height: 1.7;
     }
-    
-    .source-tag {
-        display: block;
-        padding: 0.5rem 0.8rem;
-        border-radius: 0.5rem;
-        font-size: 0.8rem;
-        font-weight: 500;
-        margin: 0.4rem 0;
-    }
+    .source-tag { display: block; padding: 0.5rem 0.8rem; border-radius: 0.5rem; font-size: 0.8rem; font-weight: 500; margin: 0.4rem 0; }
     .source-tag a { text-decoration: none; }
     .source-tag a:hover { text-decoration: underline; }
-    
     .source-law { background: #dbeafe; border: 1px solid #93c5fd; }
     .source-law a { color: #1e40af; }
-    
     .source-ordinance { background: #d1fae5; border: 1px solid #34d399; }
     .source-ordinance a { color: #065f46; }
-    
     .source-precedent { background: #fef3c7; border: 1px solid #fbbf24; }
     .source-precedent a { color: #92400e; }
-    
     .source-interpretation { background: #fce7f3; border: 1px solid #f472b6; }
     .source-interpretation a { color: #9d174d; }
-    
     .source-adminjudge { background: #e0e7ff; border: 1px solid #a5b4fc; }
     .source-adminjudge a { color: #3730a3; }
-    
     .source-adminrule { background: #f5f5f4; border: 1px solid #a8a29e; }
     .source-adminrule a { color: #44403c; }
-    
     .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+        display: inline-flex; align-items: center; gap: 0.5rem;
         background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        color: #166534;
-        padding: 0.6rem 1.25rem;
-        border-radius: 2rem;
-        font-size: 0.85rem;
-        font-weight: 500;
-        border: 1px solid #86efac;
-        margin-bottom: 1.5rem;
+        color: #166534; padding: 0.6rem 1.25rem; border-radius: 2rem;
+        font-size: 0.85rem; font-weight: 500; border: 1px solid #86efac; margin-bottom: 1.5rem;
     }
-    
     .footer-warning {
-        background: #fef3c7;
-        border: 1px solid #fbbf24;
-        padding: 1rem 1.5rem;
-        border-radius: 0.875rem;
-        text-align: center;
-        font-size: 0.85rem;
-        color: #92400e;
-        margin-top: 1.5rem;
+        background: #fef3c7; border: 1px solid #fbbf24;
+        padding: 1rem 1.5rem; border-radius: 0.875rem;
+        text-align: center; font-size: 0.85rem; color: #92400e; margin-top: 1.5rem;
     }
-    
     .guide-card {
-        background: rgba(255,255,255,0.08);
-        padding: 1rem 1.25rem;
-        border-radius: 0.875rem;
-        margin-bottom: 0.875rem;
-        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(255,255,255,0.08); padding: 1rem 1.25rem;
+        border-radius: 0.875rem; margin-bottom: 0.875rem; border: 1px solid rgba(255,255,255,0.1);
     }
-    
-    .guide-card-text {
-        font-size: 0.8rem;
-        opacity: 0.8;
-        line-height: 1.5;
-    }
-    
+    .guide-card-text { font-size: 0.8rem; opacity: 0.8; line-height: 1.5; }
     .section-title {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: rgba(255,255,255,0.5);
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.1em; color: rgba(255,255,255,0.5);
+        margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);
     }
-    
-    .stTextArea textarea {
-        border-radius: 1rem !important;
-        border: 2px solid #e2e8f0 !important;
-        padding: 1rem !important;
-    }
-    
+    .stTextArea textarea { border-radius: 1rem !important; border: 2px solid #e2e8f0 !important; padding: 1rem !important; }
     .stButton > button {
         background: linear-gradient(135deg, #0369a1 0%, #1e40af 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 0.875rem !important;
-        padding: 0.75rem 2rem !important;
-        font-weight: 600 !important;
+        color: white !important; border: none !important;
+        border-radius: 0.875rem !important; padding: 0.75rem 2rem !important; font-weight: 600 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -244,7 +132,16 @@ client = get_openai_client()
 
 
 # ============================================
-# 법제처 API 함수들 (정확한 URL)
+# XML 파싱 헬퍼
+# ============================================
+def get_text(element, tag):
+    """XML 요소에서 텍스트 추출"""
+    el = element.find(tag)
+    return el.text.strip() if el is not None and el.text else ""
+
+
+# ============================================
+# 법제처 API 함수들 (XML 방식)
 # ============================================
 
 def search_law(query, num_results=3):
@@ -254,7 +151,7 @@ def search_law(query, num_results=3):
         params = {
             "OC": API_OC,
             "target": "law",
-            "type": "JSON",
+            "type": "XML",
             "query": query,
             "display": num_results
         }
@@ -262,21 +159,16 @@ def search_law(query, num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        laws = data.get("LawSearch", {}).get("law", [])
-        if not laws:
-            return []
-        if isinstance(laws, dict):
-            laws = [laws]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for law in laws[:num_results]:
-            law_id = law.get("법령ID", "")
-            law_name = law.get("법령명한글", "")
-            mst = law.get("법령일련번호", "")
+        
+        for law in root.findall(".//law"):
+            law_mst = get_text(law, "법령일련번호")
+            law_name = get_text(law, "법령명한글")
+            law_id = get_text(law, "법령ID")
             
-            if law_id and law_name:
-                detail = get_law_detail(law_id)
+            if law_mst and law_name:
+                detail = get_law_detail(law_mst)
                 results.append({
                     "type": "법령",
                     "name": law_name,
@@ -284,41 +176,37 @@ def search_law(query, num_results=3):
                     "url": f"https://www.law.go.kr/법령/{law_name}"
                 })
         return results
-    except:
+    except Exception as e:
         return []
 
 
-def get_law_detail(law_id):
-    """법령 본문 조회 (target=eflaw)"""
+def get_law_detail(law_mst):
+    """법령 본문 조회"""
     try:
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
-            "target": "eflaw",
-            "type": "JSON",
-            "ID": law_id
+            "target": "law",
+            "MST": law_mst,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        law_info = data.get("기본정보", {})
-        articles = data.get("조문", {}).get("조문단위", [])
-        
-        if isinstance(articles, dict):
-            articles = [articles]
-        
+        root = ET.fromstring(response.content)
         content = ""
-        for art in articles[:10]:
-            jo_num = art.get("조문번호", "")
-            jo_title = art.get("조문제목", "")
-            jo_content = art.get("조문내용", "")
+        
+        for article in root.findall(".//조문단위")[:15]:
+            jo_num = get_text(article, "조문번호")
+            jo_title = get_text(article, "조문제목")
+            jo_content = get_text(article, "조문내용")
+            
             if jo_content:
                 title_str = f"({jo_title})" if jo_title else ""
                 content += f"제{jo_num}조{title_str} {jo_content}\n\n"
         
-        return content[:3000] if content else ""
+        return content[:4000] if content else ""
     except:
         return ""
 
@@ -327,15 +215,11 @@ def search_ordinance(query, local_gov="", num_results=3):
     """2. 자치법규 목록 검색"""
     try:
         url = "http://www.law.go.kr/DRF/lawSearch.do"
-        # 지자체명을 쿼리 앞에 붙여서 해당 지역 조례 우선
-        if local_gov:
-            search_query = f"{local_gov} {query}"
-        else:
-            search_query = query
+        search_query = f"{local_gov} {query}" if local_gov else query
         params = {
             "OC": API_OC,
             "target": "ordin",
-            "type": "JSON",
+            "type": "XML",
             "query": search_query,
             "display": num_results
         }
@@ -343,21 +227,16 @@ def search_ordinance(query, local_gov="", num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        ordins = data.get("LawSearch", {}).get("law", [])
-        if not ordins:
-            return []
-        if isinstance(ordins, dict):
-            ordins = [ordins]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for ordin in ordins[:num_results]:
-            ordin_id = ordin.get("자치법규ID", "") or ordin.get("법령ID", "")
-            ordin_name = ordin.get("자치법규명한글", "") or ordin.get("법령명한글", "")
-            local_name = ordin.get("자치단체명", "")
+        
+        for law in root.findall(".//law"):
+            ordin_mst = get_text(law, "자치법규일련번호")
+            ordin_name = get_text(law, "자치법규명")
+            local_name = get_text(law, "지자체기관명")
             
-            if ordin_name:
-                detail = get_ordinance_detail(ordin_id)
+            if ordin_mst and ordin_name:
+                detail = get_ordinance_detail(ordin_mst)
                 display_name = f"[{local_name}] {ordin_name}" if local_name else ordin_name
                 results.append({
                     "type": "자치법규",
@@ -370,37 +249,33 @@ def search_ordinance(query, local_gov="", num_results=3):
         return []
 
 
-def get_ordinance_detail(ordin_id):
-    """자치법규 본문 조회 (target=ordin)"""
+def get_ordinance_detail(ordin_mst):
+    """자치법규 본문 조회"""
     try:
-        if not ordin_id:
-            return ""
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
             "target": "ordin",
-            "type": "JSON",
-            "ID": ordin_id
+            "MST": ordin_mst,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        articles = data.get("조문", {}).get("조문단위", [])
-        if isinstance(articles, dict):
-            articles = [articles]
-        
+        root = ET.fromstring(response.content)
         content = ""
-        for art in articles[:10]:
-            jo_num = art.get("조문번호", "")
-            jo_title = art.get("조문제목", "")
-            jo_content = art.get("조문내용", "")
+        
+        for article in root.findall(".//조문단위")[:15]:
+            jo_num = get_text(article, "조문번호")
+            jo_title = get_text(article, "조문제목")
+            jo_content = get_text(article, "조문내용")
+            
             if jo_content:
                 title_str = f"({jo_title})" if jo_title else ""
                 content += f"제{jo_num}조{title_str} {jo_content}\n\n"
         
-        return content[:3000] if content else ""
+        return content[:4000] if content else ""
     except:
         return ""
 
@@ -412,7 +287,7 @@ def search_precedent(query, num_results=3):
         params = {
             "OC": API_OC,
             "target": "prec",
-            "type": "JSON",
+            "type": "XML",
             "query": query,
             "display": num_results
         }
@@ -420,19 +295,14 @@ def search_precedent(query, num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        precs = data.get("PrecSearch", {}).get("prec", [])
-        if not precs:
-            return []
-        if isinstance(precs, dict):
-            precs = [precs]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for prec in precs[:num_results]:
-            prec_id = prec.get("판례일련번호", "")
-            case_name = prec.get("사건명", "")
-            case_num = prec.get("사건번호", "")
-            court = prec.get("법원명", "")
+        
+        for prec in root.findall(".//prec"):
+            prec_id = get_text(prec, "판례일련번호")
+            case_name = get_text(prec, "사건명")
+            case_num = get_text(prec, "사건번호")
+            court = get_text(prec, "법원명")
             
             if prec_id:
                 detail = get_precedent_detail(prec_id)
@@ -441,7 +311,7 @@ def search_precedent(query, num_results=3):
                     "type": "판례",
                     "name": display_name,
                     "content": detail if detail else "(본문 조회 불가)",
-                    "url": f"https://www.law.go.kr/판례/(, {case_num})"
+                    "url": f"https://www.law.go.kr/판례/{case_num}"
                 })
         return results
     except:
@@ -449,31 +319,34 @@ def search_precedent(query, num_results=3):
 
 
 def get_precedent_detail(prec_id):
-    """판례 본문 조회 (target=prec)"""
+    """판례 본문 조회"""
     try:
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
             "target": "prec",
-            "type": "JSON",
-            "ID": prec_id
+            "ID": prec_id,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        prec_info = data.get("판례정보", {})
-        
+        root = ET.fromstring(response.content)
         content = ""
-        if prec_info.get("판시사항"):
-            content += f"[판시사항]\n{prec_info.get('판시사항')}\n\n"
-        if prec_info.get("판결요지"):
-            content += f"[판결요지]\n{prec_info.get('판결요지')}\n\n"
-        if prec_info.get("참조조문"):
-            content += f"[참조조문] {prec_info.get('참조조문')}\n\n"
         
-        return content[:3000] if content else ""
+        판시사항 = get_text(root, ".//판시사항")
+        판결요지 = get_text(root, ".//판결요지")
+        참조조문 = get_text(root, ".//참조조문")
+        
+        if 판시사항:
+            content += f"[판시사항]\n{판시사항}\n\n"
+        if 판결요지:
+            content += f"[판결요지]\n{판결요지}\n\n"
+        if 참조조문:
+            content += f"[참조조문] {참조조문}\n\n"
+        
+        return content[:4000] if content else ""
     except:
         return ""
 
@@ -485,7 +358,7 @@ def search_interpretation(query, num_results=3):
         params = {
             "OC": API_OC,
             "target": "expc",
-            "type": "JSON",
+            "type": "XML",
             "query": query,
             "display": num_results
         }
@@ -493,17 +366,12 @@ def search_interpretation(query, num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        expcs = data.get("ExpcSearch", {}).get("expc", [])
-        if not expcs:
-            return []
-        if isinstance(expcs, dict):
-            expcs = [expcs]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for expc in expcs[:num_results]:
-            expc_id = expc.get("법령해석례일련번호", "")
-            title = expc.get("안건명", "") or expc.get("제목", "")
+        
+        for expc in root.findall(".//expc"):
+            expc_id = get_text(expc, "법령해석례일련번호")
+            title = get_text(expc, "안건명")
             
             if expc_id and title:
                 detail = get_interpretation_detail(expc_id)
@@ -519,31 +387,34 @@ def search_interpretation(query, num_results=3):
 
 
 def get_interpretation_detail(expc_id):
-    """법령해석례 본문 조회 (target=expc)"""
+    """법령해석례 본문 조회"""
     try:
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
             "target": "expc",
-            "type": "JSON",
-            "ID": expc_id
+            "ID": expc_id,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        expc_info = data.get("법령해석례", {})
-        
+        root = ET.fromstring(response.content)
         content = ""
-        if expc_info.get("질의요지"):
-            content += f"[질의요지]\n{expc_info.get('질의요지')}\n\n"
-        if expc_info.get("회답"):
-            content += f"[회답]\n{expc_info.get('회답')}\n\n"
-        if expc_info.get("이유"):
-            content += f"[이유]\n{expc_info.get('이유')}\n\n"
         
-        return content[:3000] if content else ""
+        질의요지 = get_text(root, ".//질의요지")
+        회답 = get_text(root, ".//회답")
+        이유 = get_text(root, ".//이유")
+        
+        if 질의요지:
+            content += f"[질의요지]\n{질의요지}\n\n"
+        if 회답:
+            content += f"[회답]\n{회답}\n\n"
+        if 이유:
+            content += f"[이유]\n{이유}\n\n"
+        
+        return content[:4000] if content else ""
     except:
         return ""
 
@@ -555,7 +426,7 @@ def search_admin_judge(query, num_results=3):
         params = {
             "OC": API_OC,
             "target": "decc",
-            "type": "JSON",
+            "type": "XML",
             "query": query,
             "display": num_results
         }
@@ -563,27 +434,22 @@ def search_admin_judge(query, num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        deccs = data.get("DeccSearch", {}).get("decc", [])
-        if not deccs:
-            return []
-        if isinstance(deccs, dict):
-            deccs = [deccs]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for decc in deccs[:num_results]:
-            decc_id = decc.get("행정심판례일련번호", "")
-            title = decc.get("사건명", "") or decc.get("제목", "")
-            case_num = decc.get("사건번호", "")
+        
+        for decc in root.findall(".//decc"):
+            decc_id = get_text(decc, "행정심판례일련번호")
+            title = get_text(decc, "사건명")
+            case_num = get_text(decc, "사건번호")
             
-            if title:
-                detail = get_admin_judge_detail(decc_id) if decc_id else ""
+            if decc_id and title:
+                detail = get_admin_judge_detail(decc_id)
                 display_name = f"{title} ({case_num})" if case_num else title
                 results.append({
                     "type": "행정심판례",
                     "name": display_name,
                     "content": detail if detail else "(본문 조회 불가)",
-                    "url": f"https://www.law.go.kr/행정심판례/{case_num if case_num else title}"
+                    "url": f"https://www.law.go.kr/행정심판례/{case_num}"
                 })
         return results
     except:
@@ -591,43 +457,43 @@ def search_admin_judge(query, num_results=3):
 
 
 def get_admin_judge_detail(decc_id):
-    """행정심판례 본문 조회 (target=decc)"""
+    """행정심판례 본문 조회"""
     try:
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
             "target": "decc",
-            "type": "JSON",
-            "ID": decc_id
+            "ID": decc_id,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        decc_info = data.get("행정심판례", {})
-        
+        root = ET.fromstring(response.content)
         content = ""
-        if decc_info.get("재결요지"):
-            content += f"[재결요지]\n{decc_info.get('재결요지')}\n\n"
-        if decc_info.get("주문"):
-            content += f"[주문]\n{decc_info.get('주문')}\n\n"
-        if decc_info.get("이유"):
-            content += f"[이유]\n{decc_info.get('이유')}\n\n"
         
-        return content[:3000] if content else ""
+        재결요지 = get_text(root, ".//재결요지")
+        주문 = get_text(root, ".//주문")
+        
+        if 재결요지:
+            content += f"[재결요지]\n{재결요지}\n\n"
+        if 주문:
+            content += f"[주문]\n{주문}\n\n"
+        
+        return content[:4000] if content else ""
     except:
         return ""
 
 
 def search_admin_rule(query, num_results=3):
-    """6. 행정규칙 목록 검색 (훈령/예규/고시)"""
+    """6. 행정규칙 목록 검색"""
     try:
         url = "http://www.law.go.kr/DRF/lawSearch.do"
         params = {
             "OC": API_OC,
             "target": "admrul",
-            "type": "JSON",
+            "type": "XML",
             "query": query,
             "display": num_results
         }
@@ -635,21 +501,16 @@ def search_admin_rule(query, num_results=3):
         if response.status_code != 200:
             return []
         
-        data = response.json()
-        rules = data.get("AdmrulSearch", {}).get("admrul", [])
-        if not rules:
-            return []
-        if isinstance(rules, dict):
-            rules = [rules]
-        
+        root = ET.fromstring(response.content)
         results = []
-        for rule in rules[:num_results]:
-            rule_id = rule.get("행정규칙일련번호", "")
-            rule_name = rule.get("행정규칙명", "") or rule.get("제목", "")
-            rule_type = rule.get("행정규칙종류", "")
+        
+        for rule in root.findall(".//admrul"):
+            rule_mst = get_text(rule, "행정규칙일련번호")
+            rule_name = get_text(rule, "행정규칙명")
+            rule_type = get_text(rule, "행정규칙종류")
             
-            if rule_name:
-                detail = get_admin_rule_detail(rule_id) if rule_id else ""
+            if rule_mst and rule_name:
+                detail = get_admin_rule_detail(rule_mst)
                 display_name = f"[{rule_type}] {rule_name}" if rule_type else rule_name
                 results.append({
                     "type": "행정규칙",
@@ -662,35 +523,33 @@ def search_admin_rule(query, num_results=3):
         return []
 
 
-def get_admin_rule_detail(rule_id):
-    """행정규칙 본문 조회 (target=admrul)"""
+def get_admin_rule_detail(rule_mst):
+    """행정규칙 본문 조회"""
     try:
         url = "http://www.law.go.kr/DRF/lawService.do"
         params = {
             "OC": API_OC,
             "target": "admrul",
-            "type": "JSON",
-            "ID": rule_id
+            "MST": rule_mst,
+            "type": "XML"
         }
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
             return ""
         
-        data = response.json()
-        articles = data.get("조문", {}).get("조문단위", [])
-        if isinstance(articles, dict):
-            articles = [articles]
-        
+        root = ET.fromstring(response.content)
         content = ""
-        for art in articles[:10]:
-            jo_num = art.get("조문번호", "")
-            jo_title = art.get("조문제목", "")
-            jo_content = art.get("조문내용", "")
+        
+        for article in root.findall(".//조문단위")[:15]:
+            jo_num = get_text(article, "조문번호")
+            jo_title = get_text(article, "조문제목")
+            jo_content = get_text(article, "조문내용")
+            
             if jo_content:
                 title_str = f"({jo_title})" if jo_title else ""
                 content += f"제{jo_num}조{title_str} {jo_content}\n\n"
         
-        return content[:3000] if content else ""
+        return content[:4000] if content else ""
     except:
         return ""
 
@@ -702,7 +561,7 @@ def get_admin_rule_detail(rule_id):
 SYSTEM_PROMPT = """당신은 대한민국 법령 검색 AI입니다.
 
 ## 절대 원칙
-당신은 오직 [검색된 관련 법령/자치법규/판례/해석례/행정규칙] 내용만 답변합니다.
+당신은 오직 아래 [검색 결과]에 있는 내용만 답변합니다.
 검색 결과에 없는 내용은 절대 말하지 않습니다.
 당신의 사전 학습 지식을 사용하지 마세요.
 
@@ -738,7 +597,7 @@ def get_ai_response(messages, local_gov=""):
     admin_rule_results = search_admin_rule(user_query, 2)
     
     # 컨텍스트 구성
-    context = ""
+    context = "\n\n[검색 결과]"
     all_sources = []
     
     if law_results:
@@ -777,8 +636,8 @@ def get_ai_response(messages, local_gov=""):
             context += f"### {r['name']}\n{r['content']}\n"
             all_sources.append(r)
     
-    if not context:
-        context = "\n\n(관련 자료를 찾지 못했습니다.)\n"
+    if not all_sources:
+        context += "\n\n(검색 결과 없음)\n"
     
     full_messages = [
         {"role": "system", "content": SYSTEM_PROMPT + context},
@@ -788,7 +647,7 @@ def get_ai_response(messages, local_gov=""):
         model="gpt-4o",
         messages=full_messages,
         max_tokens=2048,
-        temperature=0.7
+        temperature=0.3
     )
     
     return response.choices[0].message.content, all_sources
@@ -857,7 +716,7 @@ with st.sidebar:
 st.markdown("""
 <div class="main-header">
     <h1>⚖️ Aide 1.0 <span class="header-badge">공무원 AI 보좌관</span></h1>
-    <p>국가법령 기반 신뢰성있는 답변을 제공합니다.</p>
+    <p>법령 · 판례 · 해석례 · 행정규칙 통합 검색 | 법제처 Open API</p>
 </div>
 """, unsafe_allow_html=True)
 
